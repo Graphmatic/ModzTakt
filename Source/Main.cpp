@@ -23,11 +23,15 @@ public:
     bool moreThanOneInstanceAllowed() override             { return true; }
 
     //==============================================================================
-    void initialise (const juce::String& commandLine) override
+    void initialise (const juce::String&) override
     {
-        // This method is where you should put your application's initialisation code..
-
         mainWindow.reset (new MainWindow (getApplicationName()));
+
+        juce::MessageManager::callAsync ([this]
+        {
+            if (auto* mc = dynamic_cast<MainComponent*> (mainWindow->getContentComponent()))
+                mc->postJuceInit();
+        });
     }
 
     void shutdown() override
@@ -93,6 +97,11 @@ public:
            you really have to override any DocumentWindow methods, make sure your
            subclass also calls the superclass's method.
         */
+        // MainComponent* getMainComponent() const
+        // {
+        //     return dynamic_cast<MainComponent*> (getContentComponent());
+        // }
+
 
     private:
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)

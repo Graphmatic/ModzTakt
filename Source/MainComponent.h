@@ -386,7 +386,6 @@ public:
         auto area = getLocalBounds().reduced(12);
 
         // ---- Horizontal split ----
-        // ---- Horizontal split ----
         auto lfoColumn = area.removeFromLeft(lfoWidth);
         area.removeFromLeft(columnSpacing);
         auto egColumn  = area.removeFromLeft(egWidth);
@@ -547,6 +546,13 @@ public:
             envelopeComponent->setBounds(egColumn);
 
     }
+
+    void postJuceInit()
+    {
+        refreshMidiInputs();
+        refreshMidiOutputs();
+    }
+
 
 
 private:

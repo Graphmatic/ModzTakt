@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="uOuBID" name="ModzTakt" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyEmail="makethembusy@proton.me"
-              bundleIdentifier="com.zaoum.modztakt">
+              bundleIdentifier="com.zaoum.modztakt" defines="JUCE_ALSA=1&#10;JUCE_ALSA_MIDI=1&#10;JUCE_JACK=0">
   <MAINGROUP id="TYoiW9" name="ModzTakt">
     <GROUP id="{2B64A09A-E9B6-0936-1CA3-4333E5C25275}" name="Source">
       <FILE id="eEsiSf" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -21,7 +21,7 @@
   </MAINGROUP>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
-    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
@@ -29,7 +29,7 @@
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
     <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
   </MODULES>
-  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_ALSA="1" JUCE_JACK="0"/>
   <EXPORTFORMATS>
     <LINUX_MAKE targetFolder="Builds/LinuxMakefile">
       <CONFIGURATIONS>
