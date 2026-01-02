@@ -27,6 +27,7 @@ public:
     {
         mainWindow.reset (new MainWindow (getApplicationName()));
 
+        // JUCE 8 need MIDI devices to be started earlier
         juce::MessageManager::callAsync ([this]
         {
             if (auto* mc = dynamic_cast<MainComponent*> (mainWindow->getContentComponent()))

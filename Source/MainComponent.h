@@ -218,13 +218,18 @@ public:
 
             routeParameterBoxes[i].onChange = [this, i]()
             {
-                lfoRoutes[i].parameterIndex = routeParameterBoxes[i].getSelectedId() - 1;
-                // Use dontSendNotification to avoid recursive callbacks
-                routeBipolarToggles[i].setToggleState(
-                    syntaktParameters[routeParameterBoxes[i].getSelectedId() - 1].isBipolar, 
-                    juce::dontSendNotification);
-                    lfoRoutes[i].bipolar = syntaktParameters[routeParameterBoxes[i].getSelectedId() - 1].isBipolar;
+                lfoRoutes[i].parameterIndex =
+                    routeParameterBoxes[i].getSelectedId() - 1;
+
+                const bool paramIsBipolar =
+                    syntaktParameters[lfoRoutes[i].parameterIndex].isBipolar;
+
+                // Initialize UI + route state ONCE
+                routeBipolarToggles[i].setToggleState(paramIsBipolar,
+                                                     juce::dontSendNotification);
+                lfoRoutes[i].bipolar = paramIsBipolar;
             };
+
 
             routeBipolarToggles[i].onClick = [this, i]()
             {
@@ -241,19 +246,17 @@ public:
                 routeChannelBoxes[i].setSelectedId(1, juce::dontSendNotification); // Disabled
                 
             routeParameterBoxes[i].setSelectedId(1, juce::dontSendNotification);
-            routeBipolarToggles[i].setToggleState(syntaktParameters[routeParameterBoxes[i].getSelectedId() - 1].isBipolar, juce::dontSendNotification);
+            routeBipolarToggles[i].setToggleState(false, juce::dontSendNotification);
 
             // -------- Initialize route state --------
-            lfoRoutes[i] =
-            {
-                (routeChannelBoxes[i].getSelectedId() == 1)
-                    ? 0
-                    : routeChannelBoxes[i].getSelectedId() - 1,
-                routeParameterBoxes[i].getSelectedId() - 1,
-                // Default bipolar value
-                lfoRoutes[i].bipolar = syntaktParameters[routeParameterBoxes[i].getSelectedId() - 1].isBipolar
-//                routeBipolarToggles[i].getToggleState()
-            };
+            lfoRoutes[i].midiChannel = (routeChannelBoxes[i].getSelectedId() == 1)
+                                        ? 0
+                                        : routeChannelBoxes[i].getSelectedId() - 1;
+
+            lfoRoutes[i].parameterIndex = routeParameterBoxes[i].getSelectedId() - 1;
+
+            lfoRoutes[i].bipolar = routeBipolarToggles[i].getToggleState();
+
             
 
             // -------- Set initial visibility --------
@@ -957,7 +960,7 @@ private:
             // --- Per-route waveform + mapping (compute shape per route) ---
             for (int i = 0; i < maxRoutes; ++i)
             {
-                lfoRoutes[i].bipolar = routeBipolarToggles[i].getToggleState();
+                //lfoRoutes[i].bipolar = routeBipolarToggles[i].getToggleState();
                 const auto& route = lfoRoutes[i];
 
                 if (route.midiChannel <= 0)
@@ -974,7 +977,7 @@ private:
 
 
                 // Unipolar routes start at minimum → phase offset
-                if (!route.bipolar)
+                if (route.bipolar)
                 {
                     routePhase += 0.25; // quarter cycle shift
                     if (routePhase >= 1.0)
