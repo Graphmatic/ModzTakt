@@ -1029,6 +1029,13 @@ private:
                     const int range  = (param.maxValue - param.minValue) / 2;
 
                     midiVal = center + int(std::round(normalized * range));
+
+                    midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
+
+                sendThrottledParamValue(i,
+                                        route.midiChannel,
+                                        param,
+                                        midiVal);
                 }
                 else
                 {
@@ -1039,14 +1046,16 @@ private:
 
                     midiVal = param.minValue
                             + int(std::round(normalized * (param.maxValue - param.minValue)));
-                }
 
-                midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
+                    midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
 
                 sendThrottledParamValue(i,
                                         route.midiChannel,
                                         param,
                                         midiVal);
+                }
+
+                
             }
 
 
