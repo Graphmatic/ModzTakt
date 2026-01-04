@@ -170,6 +170,16 @@ public:
         addAndMakeVisible(noteDebugLabel);
         #endif
 
+        // LFO routes checkbox labels
+        bipolarLabel.setText("+/-", juce::dontSendNotification);
+        addAndMakeVisible(bipolarLabel);
+
+        invertPhaseLabel.setText("inv.", juce::dontSendNotification);
+        addAndMakeVisible(invertPhaseLabel);
+
+        oneShotLabel.setText("1-s", juce::dontSendNotification);
+        addAndMakeVisible(oneShotLabel);
+
         //***** === Multi-CC Routing (3 routes) ===
         for (int i = 0; i < maxRoutes; ++i)
         {
@@ -459,6 +469,50 @@ public:
 
         placeRow(divisionLabel, divisionBox);
 
+        // LFO routes checkbox top labels
+        constexpr int routeLabelWidth      = 70;
+        constexpr int channelBoxWidth      = 90;
+        constexpr int parameterBoxWidth    = 200;
+        constexpr int checkboxColumnWidth  = 40;
+        constexpr int columnGap            = 8;
+
+        auto headerRow = lfoAreaContent.removeFromTop(rowHeight);
+
+        juce::FlexBox headerFlex;
+        headerFlex.flexDirection = juce::FlexBox::Direction::row;
+        headerFlex.alignItems = juce::FlexBox::AlignItems::flexEnd;
+
+        // --- spacers for Route / Channel / Parameter columns ---
+        headerFlex.items.add(juce::FlexItem().withWidth(routeLabelWidth + columnGap));
+        headerFlex.items.add(juce::FlexItem().withWidth(channelBoxWidth + columnGap));
+        headerFlex.items.add(juce::FlexItem().withWidth(parameterBoxWidth + columnGap));
+
+        // --- checkbox headers ---
+        headerFlex.items.add(
+            juce::FlexItem(bipolarLabel)
+                .withWidth(checkboxColumnWidth)
+                .withHeight(rowHeight)
+                .withMargin({ 0, columnGap, 0, 0 })
+        );
+
+        headerFlex.items.add(
+            juce::FlexItem(invertPhaseLabel)
+                .withWidth(checkboxColumnWidth)
+                .withHeight(rowHeight)
+                .withMargin({ 0, columnGap, 0, 0 })
+        );
+
+        headerFlex.items.add(
+            juce::FlexItem(oneShotLabel)
+                .withWidth(checkboxColumnWidth)
+                .withHeight(rowHeight)
+                .withMargin({ 0, columnGap, 0, 0 })
+        );
+
+        headerFlex.performLayout(headerRow);
+
+        lfoAreaContent.removeFromTop(6);
+
         // Place route selectors
         for (int i = 0; i < maxRoutes; ++i)
         {
@@ -470,70 +524,62 @@ public:
 
             fb.items.add(
                 juce::FlexItem(routeLabels[i])
-                    .withWidth(70)
+                    .withWidth(routeLabelWidth)
                     .withHeight(rowHeight)
-                    .withMargin({ 0, 8, 0, 0 }) // right margin
+                    .withMargin({ 0, columnGap, 0, 0 })
             );
 
             fb.items.add(
                 juce::FlexItem(routeChannelBoxes[i])
-                    .withWidth(90)
+                    .withWidth(channelBoxWidth)
                     .withHeight(rowHeight)
-                    .withMargin({ 0, 8, 0, 0 }) // right margin
+                    .withMargin({ 0, columnGap, 0, 0 })
             );
 
             if (routeParameterBoxes[i].isVisible())
             {
                 fb.items.add(
                     juce::FlexItem(routeParameterBoxes[i])
-                        .withWidth(200)
+                        .withWidth(parameterBoxWidth)
                         .withHeight(rowHeight)
-                        .withMargin({ 0, 8, 0, 0 }) // right margin
+                        .withMargin({ 0, columnGap, 0, 0 })
                 );
+            }
+            else
+            {
+                // keep column alignment even if hidden
+                fb.items.add(juce::FlexItem().withWidth(parameterBoxWidth + columnGap));
             }
 
-            if (routeBipolarToggles[i].isVisible())
-            {
-                fb.items.add(
-                    juce::FlexItem(routeBipolarToggles[i])
-                        .withWidth(40)
-                        .withHeight(rowHeight)
-                        .withMargin({ 0, 8, 0, 0 }) // right margin
-                );
-            }
+            fb.items.add(
+                juce::FlexItem(routeBipolarToggles[i])
+                    .withWidth(checkboxColumnWidth)
+                    .withHeight(rowHeight)
+                    .withMargin({ 0, columnGap, 0, 0 })
+            );
 
-            if (routeInvertToggles[i].isVisible())
-            {
-                fb.items.add(
-                    juce::FlexItem(routeInvertToggles[i])
-                        .withWidth(40)
-                        .withHeight(rowHeight)
-                        .withMargin({ 0, 8, 0, 0 }) // right margin
-                );
-            }
+            fb.items.add(
+                juce::FlexItem(routeInvertToggles[i])
+                    .withWidth(checkboxColumnWidth)
+                    .withHeight(rowHeight)
+                    .withMargin({ 0, columnGap, 0, 0 })
+            );
 
-            if (routeOneShotToggles[i].isVisible())
-            {
-                fb.items.add(
-                    juce::FlexItem(routeOneShotToggles[i])
-                        .withWidth(40)
-                        .withHeight(rowHeight)
-                        .withMargin({ 0, 8, 0, 0 }) // right margin
-                );
-            }
+            fb.items.add(
+                juce::FlexItem(routeOneShotToggles[i])
+                    .withWidth(checkboxColumnWidth)
+                    .withHeight(rowHeight)
+                    .withMargin({ 0, columnGap, 0, 0 })
+            );
 
             fb.performLayout(rowArea);
-
             lfoAreaContent.removeFromTop(10);
         }
 
 
+
         placeRow(shapeLabel, shapeBox);
 
-        // auto invertRow = lfoAreaContent.removeFromTop(rowHeight);
-        // oneShotToggle.setBounds(invertRow.removeFromRight(100));
-        // oneShotToggle.setVisible(noteRestartToggle.getToggleState());
-        // invertPhaseToggle.setBounds(invertRow.removeFromRight(140));
         lfoAreaContent.removeFromTop(6);
 
         placeRow(rateLabel, rateSlider);
@@ -617,14 +663,11 @@ private:
 
     juce::Label midiOutputLabel, midiInputLabel, syncModeLabel;
     juce::Label bpmLabelTitle, bpmLabel, divisionLabel;
-    juce::Label parameterLabel, shapeLabel, rateLabel, depthLabel, channelLabel;
+    juce::Label parameterLabel, shapeLabel, rateLabel, depthLabel, channelLabel, bipolarLabel, invertPhaseLabel, oneShotLabel;
 
     juce::ComboBox midiOutputBox, midiInputBox, syncModeBox, divisionBox;
     juce::ComboBox shapeBox; //parameterBox
-    juce::Slider rateSlider, depthSlider; //, channelSlider;
-
-    // juce::ToggleButton oneShotToggle { "One-Shot"};
-    // juce::ToggleButton invertPhaseToggle { "Invert Phase" };
+    juce::Slider rateSlider, depthSlider;
 
     //Note-On retrig on/off and source channel
     juce::ToggleButton noteRestartToggle { "Restart on Note-On" };
@@ -662,8 +705,8 @@ private:
         int midiChannel = 0;
         int parameterIndex = 0;
         bool bipolar = false;
-        bool invertPhase = false;  // NEW
-        bool oneShot     = false;  // NEW
+        bool invertPhase = false;
+        bool oneShot     = false;
 
         bool hasFinishedOneShot = false; // runtime state
     };
@@ -985,9 +1028,6 @@ private:
                 startButton.setButtonText("Stop LFO");
             }
 
-            // if (oneShotMode)
-            //     oneShotActive = true;
-            //     oneShotPhaseAccum = 0.0;   // reset accumulator
         }
    
 
@@ -1093,9 +1133,6 @@ private:
                         shape = random.nextDouble() * 2.0 - 1.0;
                         break;
                 }
-
-                if (route.invertPhase)
-                    shape = -shape;
 
                 // --- Mapping ---
                 const auto& param = syntaktParameters[route.parameterIndex];
