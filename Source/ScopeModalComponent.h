@@ -27,7 +27,6 @@ public:
                 this->lfoRoutesEnabled[i] =
                     routeButtons[i].getToggleState();
             };
-
         }
 
         startTimerHz(60);
@@ -36,7 +35,7 @@ public:
     void resized()
     {
         auto area = getLocalBounds();
-        
+
         auto controlArea = area.removeFromBottom(40);
 
         for (auto& b : routeButtons)
