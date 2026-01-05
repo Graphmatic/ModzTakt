@@ -4,6 +4,7 @@
 #include "MidiInput.h"
 #include "MidiMonitorWindow.h"
 #include "EnvelopeComponent.h"
+#include "LfoScopeComponent.h"
 
 class MainComponent : public juce::Component,
                       private juce::Timer,
@@ -26,6 +27,10 @@ public:
         // Envelop Generator
         envelopeComponent = std::make_unique<EnvelopeComponent>();
         addAndMakeVisible(*envelopeComponent);
+
+        // Oscilloscope view
+        lfoScope = std::make_unique<LfoScopeComponent>();
+        addAndMakeVisible(*lfoScope);
 
         // MIDI Output
         midiOutputLabel.setText("MIDI Output:", juce::dontSendNotification);
@@ -640,6 +645,14 @@ public:
         placeDebugRow(noteDebugTitle, noteDebugLabel);
         #endif
 
+        // Oscilloscope
+        lfoAreaContent.removeFromTop(40);
+
+        auto scopeBounds = lfoAreaContent.removeFromTop(100)
+                                         .withSizeKeepingCentre(160, 160);
+
+        lfoScope->setBounds(scopeBounds);
+
         // setting button
         auto bounds = getLocalBounds();
         auto size = 24; // small square button
@@ -759,8 +772,11 @@ private:
 
     //bipolar check
     juce::Label lfoRouteDebugLabel;
-
+    bool showRouteDebugLabel = false;
     #endif
+
+    // Oscilloscope
+    std::unique_ptr<LfoScopeComponent> lfoScope;
 
     enum class LfoShape
     {
@@ -1166,7 +1182,7 @@ private:
                                                 random
                                             );
 
-                // --- One-shot logic ---
+                // One-shot logic
                 if (route.oneShot)
                 {
                     if (route.bipolar)
@@ -1184,7 +1200,7 @@ private:
                     }
                 }
 
-                // --- Mapping ---
+                // Mapping
                 const auto& param = syntaktParameters[route.parameterIndex];
                 const double depth = depthSlider.getValue();
 
@@ -1207,6 +1223,12 @@ private:
                 midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
 
                 sendThrottledParamValue(i, route.midiChannel, param, midiVal);
+
+                // Oscilloscope
+                if (i == 0) // show first route only (debug)
+                {
+                    lfoScope->pushSample((float)shape * depth);
+                }
             }
 
         }
@@ -1231,7 +1253,7 @@ private:
         }
 
         #if JUCE_DEBUG
-        updateLfoRouteDebugLabel();
+            updateLfoRouteDebugLabel();
         #endif
     }
 
@@ -1537,7 +1559,9 @@ private:
     #if JUCE_DEBUG
     void updateLfoRouteDebugLabel()
     {
-        juce::String text;
+        if (showRouteDebugLabel)
+        {
+            juce::String text;
 
         text << "LFO Routes bipolar state:\n";
 
@@ -1555,6 +1579,8 @@ private:
         }
 
         lfoRouteDebugLabel.setText(text, juce::dontSendNotification);
+        }
+        
     }
     #endif
 
