@@ -4,7 +4,8 @@
 #include "MidiInput.h"
 #include "MidiMonitorWindow.h"
 #include "EnvelopeComponent.h"
-#include "LfoScopeComponent.h"
+#include "ScopeWindow.h"
+#include "ScopeModalComponent.h"
 
 class MainComponent : public juce::Component,
                       private juce::Timer,
@@ -27,10 +28,6 @@ public:
         // Envelop Generator
         envelopeComponent = std::make_unique<EnvelopeComponent>();
         addAndMakeVisible(*envelopeComponent);
-
-        // Oscilloscope view
-        lfoScope = std::make_unique<LfoScopeComponent>();
-        addAndMakeVisible(*lfoScope);
 
         // MIDI Output
         midiOutputLabel.setText("MIDI Output:", juce::dontSendNotification);
@@ -335,9 +332,31 @@ public:
         // Initialize the atomic variable with current selection
         noteRestartChannel.store(noteSourceChannelBox.getSelectedId(), std::memory_order_release);
 
+        // Oscilloscope modal switch
+        //juce::Image scopeIcon = juce::ImageCache::getFromMemory(BinaryData::scope_png, BinaryData::scope_pngSize);
+
+        // scopeButton.setButtonText("Scope");
+
+        // addAndMakeVisible(scopeButton);
+
+        addAndMakeVisible(scopeButton);
+
+        scopeButton.setToggleable(true);
+        scopeButton.setClickingTogglesState(true);
+        scopeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        scopeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
+
+        scopeButton.onClick = [this]()
+        {
+            if (scopeButton.getToggleState())
+            {
+                openScope();
+            }
+        };
+
         // Settings Button
         addAndMakeVisible(settingsButton);
-        settingsButton.setButtonText("Settings"); // or "Opt" for a plainer look
+        settingsButton.setButtonText("Settings");
         settingsButton.setTooltip("Open settings menu");
         settingsButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
         settingsButton.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
@@ -645,17 +664,22 @@ public:
         placeDebugRow(noteDebugTitle, noteDebugLabel);
         #endif
 
-        // Oscilloscope
-        lfoAreaContent.removeFromTop(40);
+        constexpr int size = 24;
+        constexpr int marginScope = 8;
 
-        auto scopeBounds = lfoAreaContent.removeFromTop(100)
-                                         .withSizeKeepingCentre(130, 130);
+        auto lfoBounds = lfoGroup.getBounds();
 
-        lfoScope->setBounds(scopeBounds);
+        scopeButton.setBounds(
+            lfoBounds.getX() + marginScope,
+            lfoBounds.getBottom() - size - marginScope,
+            size + 24,
+            size
+        );
 
         // setting button
         auto bounds = getLocalBounds();
-        auto size = 24; // small square button
+
+        
         settingsButton.setBounds(bounds.removeFromBottom(10 + size)
                                         .removeFromRight(10 + size)
                                         .removeFromLeft(size)
@@ -682,7 +706,8 @@ public:
         );
 
         // bipolar check
-        lfoRouteDebugLabel.setBounds(10, getHeight() - 120, 300, 100);
+        if (showRouteDebugLabel)
+            lfoRouteDebugLabel.setBounds(10, getHeight() - 120, 300, 100);
         #endif
 
         // Envelop generator frame
@@ -696,6 +721,27 @@ public:
         refreshMidiInputs();
         refreshMidiOutputs();
     }
+
+    // Oscilloscope pop-up view (not modal)
+    void openScope()
+    {
+        if (scopeWindow)
+        {
+            scopeWindow->toFront(true);
+            return;
+        }
+
+        auto* scope = new ScopeModalComponent(lastLfoValue);
+
+        scopeWindow.reset(new ScopeWindow(
+            scope,
+            [this]()
+            {
+                scopeWindow.reset();
+            }
+        ));
+    }
+
 
 
 
@@ -776,7 +822,10 @@ private:
     #endif
 
     // Oscilloscope
-    std::unique_ptr<LfoScopeComponent> lfoScope;
+    //std::unique_ptr<LfoScopeComponent> lfoScope;
+    //std::unique_ptr<juce::DialogWindow> scopeWindow;
+
+    juce::TextButton scopeButton { "Scope" };
 
     enum class LfoShape
     {
@@ -805,6 +854,11 @@ private:
     // BPM smoothing / throttling
     double displayedBpm = 0.0;
     juce::int64 lastBpmUpdateMs = 0;
+
+    // Oscilloscope
+    std::atomic<float> lastLfoValue { 0.0f };
+    std::unique_ptr<ScopeWindow> scopeWindow;
+
 
     // EG
     std::unique_ptr<EnvelopeComponent> envelopeComponent;
@@ -1225,10 +1279,7 @@ private:
                 sendThrottledParamValue(i, route.midiChannel, param, midiVal);
 
                 // Oscilloscope
-                if (i == 0) // show first route only (debug)
-                {
-                    lfoScope->pushSample((float)shape * depth);
-                }
+                lastLfoValue.store(shape * depth, std::memory_order_relaxed);
             }
 
         }

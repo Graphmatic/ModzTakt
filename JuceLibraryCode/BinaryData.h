@@ -8,11 +8,14 @@
 
 namespace BinaryData
 {
+    extern const char*   scope_png;
+    const int            scope_pngSize = 97034;
+
     extern const char*   TODO_md;
     const int            TODO_mdSize = 91;
 
     // Number of elements in the namedResourceList and originalFileNames arrays.
-    const int namedResourceListSize = 1;
+    const int namedResourceListSize = 2;
 
     // Points to the start of a list of resource names.
     extern const char* namedResourceList[];

@@ -1,22 +1,14 @@
 #pragma once
 #include <JuceHeader.h>
 
-class LfoScopeComponent : public juce::Component,
-                          private juce::Timer
+class ScopeModalComponent : public juce::Component,
+                            private juce::Timer
 {
 public:
-    LfoScopeComponent()
+    ScopeModalComponent(std::atomic<float>& lfoValueRef)
+        : lfoValue(lfoValueRef)
     {
-        buffer.fill(0.0f);
-        startTimerHz(30); // repaint rate
-    }
-
-    // Push a new LFO sample (-1..+1 expected)
-    void pushSample(float v)
-    {
-        v = juce::jlimit(-1.0f, 1.0f, v);
-        buffer[writeIndex] = v;
-        writeIndex = (writeIndex + 1) % bufferSize;
+        startTimerHz(60);
     }
 
     void paint(juce::Graphics& g) override
@@ -71,15 +63,28 @@ public:
         g.restoreState();               // ⬅ restore unclipped state
     }
 
-    void resized() override {}
-
 private:
     void timerCallback() override
     {
+        pushSample(lfoValue.load(std::memory_order_relaxed));
         repaint();
     }
+
+    // Push a new LFO sample (-1..+1 expected)
+    void pushSample(float v)
+    {
+        v = juce::jlimit(-1.0f, 1.0f, v);
+        buffer[writeIndex] = v;
+        writeIndex = (writeIndex + 1) % bufferSize;
+    }
+
+    std::atomic<float>& lfoValue;
 
     static constexpr int bufferSize = 128;
     std::array<float, bufferSize> buffer;
     int writeIndex = 0;
 };
+
+
+
+
