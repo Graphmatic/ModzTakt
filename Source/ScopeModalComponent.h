@@ -8,7 +8,7 @@ class ScopeModalComponent : public juce::Component,
                             private juce::Timer
 {
 public:
-    //ScopeModalComponent(std::atomic<float>& lfoValueRef)
+
     using LFOValuesArray = std::array<std::atomic<float>, N>;
     using RoutesEnabledArray = std::array<bool, N>;
 
@@ -107,8 +107,6 @@ public:
 private:
     void timerCallback() override
     {
-        //pushSample(lfoValue.load(std::memory_order_relaxed));
-
         for (size_t i = 0; i < lfoValues.size(); ++i)
         {
             if (lfoRoutesEnabled[i])
