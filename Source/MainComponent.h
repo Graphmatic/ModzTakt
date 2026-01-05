@@ -27,12 +27,12 @@ public:
         envelopeComponent = std::make_unique<EnvelopeComponent>();
         addAndMakeVisible(*envelopeComponent);
 
-        // === MIDI Output ===
+        // MIDI Output
         midiOutputLabel.setText("MIDI Output:", juce::dontSendNotification);
         addAndMakeVisible(midiOutputLabel);
         addAndMakeVisible(midiOutputBox);
 
-        // === MIDI Input for Clock ===
+        // MIDI Input for Clock
         midiInputLabel.setText("MIDI Input (Clock):", juce::dontSendNotification);
         addAndMakeVisible(midiInputLabel);
         addAndMakeVisible(midiInputBox);
@@ -180,15 +180,15 @@ public:
         oneShotLabel.setText("1-s", juce::dontSendNotification);
         addAndMakeVisible(oneShotLabel);
 
-        //***** === Multi-CC Routing (3 routes) ===
+        // Multi-CC Routing (3 routes)
         for (int i = 0; i < maxRoutes; ++i)
         {
-            // -------- Label --------
+            // Label
             routeLabels[i].setText("Route " + juce::String(i + 1),
                                     juce::dontSendNotification);
             addAndMakeVisible(routeLabels[i]);
 
-            // -------- Channel box --------
+            // Channel box
             if (i != 0) {
                 routeChannelBoxes[i].addItem("Disabled", 1);
             }
@@ -198,26 +198,26 @@ public:
 
             addAndMakeVisible(routeChannelBoxes[i]);
 
-            // -------- Parameter box --------
+            // Parameter box
             for (int p = 0; p < juce::numElementsInArray(syntaktParameters); ++p)
                 routeParameterBoxes[i].addItem(syntaktParameters[p].name, p + 1);
 
             addAndMakeVisible(routeParameterBoxes[i]);
 
-            // -------- Bipolar toggle --------
+            // Bipolar toggle
             routeBipolarToggles[i].setButtonText("+/-");
             addAndMakeVisible(routeBipolarToggles[i]);
 
-            // -------- Invert Phase toggle --------
+            // Invert Phase toggle
             routeInvertToggles[i].setButtonText("Inv");
             addAndMakeVisible(routeInvertToggles[i]);
 
-            // -------- One Shot toggle --------
+            // One Shot toggle
             routeOneShotToggles[i].setButtonText("1-Shot");
             addAndMakeVisible(routeOneShotToggles[i]);
 
 
-            // -------- Set up callbacks BEFORE setting any values --------
+            // Set up callbacks BEFORE setting any values
             routeChannelBoxes[i].onChange = [this, i]()
             {
                 const int comboId = routeChannelBoxes[i].getSelectedId();
@@ -226,7 +226,7 @@ public:
                 routeParameterBoxes[i].setVisible(enabled);
                 routeBipolarToggles[i].setVisible(enabled);
                 routeInvertToggles[i].setVisible(enabled);
-                routeOneShotToggles[i].setVisible(enabled);
+                routeOneShotToggles[i].setVisible(noteRestartToggle.getToggleState());
                 updateNoteSourceChannel();
                 
                 // Defer resized() to avoid blocking during ComboBox interaction
@@ -256,6 +256,11 @@ public:
                 #endif
             };
 
+            routeInvertToggles[i].onClick = [this, i]()
+            {
+                lfoRoutes[i].invertPhase = routeInvertToggles[i].getToggleState();
+            };
+
             routeOneShotToggles[i].onClick = [this, i]()
             {
                 lfoRoutes[i].oneShot = routeOneShotToggles[i].getToggleState();
@@ -264,18 +269,13 @@ public:
                     lfoRoutes[i].hasFinishedOneShot = false;
             };
 
-            routeInvertToggles[i].onClick = [this, i]()
-            {
-                lfoRoutes[i].invertPhase = routeInvertToggles[i].getToggleState();
-            };
-
 
 
             routeInvertToggles[i].setToggleState(false, juce::dontSendNotification);
             routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
 
 
-            // -------- NOW set initial values (this will trigger callbacks) --------
+            // set initial values
             if (i == 0)
                 routeChannelBoxes[i].setSelectedId(2, juce::dontSendNotification); // Ch 1
             else
@@ -284,7 +284,7 @@ public:
             routeParameterBoxes[i].setSelectedId(1, juce::dontSendNotification);
             routeBipolarToggles[i].setToggleState(false, juce::dontSendNotification);
 
-            // -------- Initialize route state --------
+            // Initialize route state
             lfoRoutes[i].midiChannel = (routeChannelBoxes[i].getSelectedId() == 1)
                                         ? 0
                                         : routeChannelBoxes[i].getSelectedId() - 1;
@@ -299,13 +299,12 @@ public:
 
             
 
-            // -------- Set initial visibility --------
+            // Set initial visibility
             const bool enabled = (routeChannelBoxes[i].getSelectedId() != 1);
             routeParameterBoxes[i].setVisible(enabled);
             routeBipolarToggles[i].setVisible(enabled);
             routeInvertToggles[i].setVisible(enabled);
-            routeOneShotToggles[i].setVisible(enabled);
-
+            routeOneShotToggles[i].setVisible(noteRestartToggle.getToggleState());
         }
 
         // Initialize note source channel list
@@ -411,7 +410,7 @@ public:
         startTimerHz(100); // 100Hz refresh
 
         // start size
-        setSize(1000, 600);
+        setSize(1000, 800);
 
     }
 
@@ -706,10 +705,11 @@ private:
         int parameterIndex = 0;
         bool bipolar = false;
         bool invertPhase = false;
-        bool oneShot     = false;
-
+        bool oneShot = false;
+        bool passedPeak = false; // used when unipolar + oneshot
         bool hasFinishedOneShot = false; // runtime state
     };
+
     std::array<LfoRoute, maxRoutes> lfoRoutes;
     std::array<juce::Label, maxRoutes> routeLabels;
     std::array<juce::ComboBox, maxRoutes> routeChannelBoxes;
@@ -728,6 +728,15 @@ private:
     juce::Label lfoRouteDebugLabel;
 
     #endif
+
+    enum class LfoShape
+    {
+        Sine = 1,
+        Triangle,
+        Square,
+        Saw,
+        Random
+    };
 
     // === Setting Pop-Up ===
     juce::TextButton settingsButton;
@@ -817,6 +826,9 @@ private:
         auto devices = juce::MidiOutput::getAvailableDevices();
         for (int i = 0; i < devices.size(); ++i)
             midiOutputBox.addItem(devices[i].name, i + 1);
+        #if JUCE_DEBUG
+            midiOutputBox.setSelectedId(1);
+        #endif
     }
 
     void refreshMidiInputs()
@@ -825,6 +837,9 @@ private:
         auto devices = juce::MidiInput::getAvailableDevices();
         for (int i = 0; i < devices.size(); ++i)
             midiInputBox.addItem(devices[i].name, i + 1);
+        #if JUCE_DEBUG
+            midiInputBox.setSelectedId(3);
+        #endif
     }
 
     // MIDI Sync
@@ -841,7 +856,6 @@ private:
         int inIndex = midiInputBox.getSelectedId() - 1;
         midiClock.start(inIndex);
         return;
-
     }
 
     // Call to start/stop the MidiClockHandler based on UI state
@@ -935,6 +949,7 @@ private:
                 );
 
                 lfoRoutes[i].hasFinishedOneShot = false;
+                lfoRoutes[i].passedPeak = false;
             }
             
             lfoActive = false;
@@ -955,6 +970,7 @@ private:
                 );
 
                 lfoRoutes[i].hasFinishedOneShot = false;
+                lfoRoutes[i].passedPeak = false;
             }
             
             lfoActive = true;
@@ -1020,6 +1036,7 @@ private:
                 );
 
                 lfoRoutes[i].hasFinishedOneShot = false;
+                lfoRoutes[i].passedPeak = false;
             }
 
             if (!lfoActive)
@@ -1029,9 +1046,8 @@ private:
             }
 
         }
-   
 
-        // === Always update BPM display if sync mode is active ===
+        // Always update BPM display if sync mode is active
         if (syncEnabled)
         {
             const double bpm = midiClock.getCurrentBPM();
@@ -1064,7 +1080,7 @@ private:
 
         if (lfoActive)
         {
-            // === Compute current rate ===
+            // Compute current rate
             double rateHz = rateSlider.getValue();
 
             if (syncEnabled && bpm > 0.0)
@@ -1072,66 +1088,45 @@ private:
                 rateHz = updateLfoRateFromBpm(rateHz);
             }                
 
-            // // === Generate and send LFO values ===
-            
-            // Waveform generation
-            // --- Per-route waveform + mapping (compute shape per route) ---
-            // We keep a single global 'phase' (time), but compute a per-route
-            // routePhase so bipolar/unipolar start positions can differ.
-            // --- Per-route waveform + mapping (compute shape per route) ---
+            // Generate and send LFO values
+            const double phaseInc = rateHz / sampleRate;
+            const auto shapeId = static_cast<LfoShape>(shapeBox.getSelectedId());
+
             for (int i = 0; i < maxRoutes; ++i)
             {
                 auto& route = lfoRoutes[i];
 
-                if (route.midiChannel <= 0)
+                if (route.midiChannel <= 0 || route.parameterIndex < 0)
                     continue;
 
-                if (route.parameterIndex < 0)
-                    continue;
-
-                // --- One-shot stop check ---
                 if (route.oneShot && route.hasFinishedOneShot)
                     continue;
 
-                // --- Phase advance ---
-                lfoPhase[i] += rateHz / sampleRate;
+                const bool wrapped = advancePhase(lfoPhase[i], phaseInc);
 
-                if (lfoPhase[i] >= 1.0)
+                double shape = computeWaveform(shapeId,
+                                                lfoPhase[i],
+                                                route.bipolar,
+                                                route.invertPhase,
+                                                random
+                                            );
+
+                // --- One-shot logic ---
+                if (route.oneShot)
                 {
-                    lfoPhase[i] -= 1.0;
-
-                    if (route.oneShot)
+                    if (route.bipolar)
                     {
-                        route.hasFinishedOneShot = true;
-                        continue; // do NOT generate value this tick
+                        if (wrapped)
+                            route.hasFinishedOneShot = true;
                     }
-                }
+                    else
+                    {
+                        if (!route.passedPeak && shape >= 0.999)
+                            route.passedPeak = true;
 
-                double phase = lfoPhase[i];
-
-                // --- Waveform ---
-                double shape = 0.0;
-                switch (shapeBox.getSelectedId())
-                {
-                    case 1:
-                        shape = std::sin(juce::MathConstants<double>::twoPi * phase);
-                        break;
-
-                    case 2:
-                        shape = 2.0 * std::abs(2.0 * (phase - std::floor(phase + 0.5))) - 1.0;
-                        break;
-
-                    case 3:
-                        shape = (phase < 0.5) ? 1.0 : -1.0;
-                        break;
-
-                    case 4:
-                        shape = 2.0 * (phase - std::floor(phase + 0.5));
-                        break;
-
-                    case 5:
-                        shape = random.nextDouble() * 2.0 - 1.0;
-                        break;
+                        if (route.passedPeak && shape <= -0.999)
+                            route.hasFinishedOneShot = true;
+                    }
                 }
 
                 // --- Mapping ---
@@ -1145,35 +1140,19 @@ private:
                     const int center = (param.minValue + param.maxValue) / 2;
                     const int range  = (param.maxValue - param.minValue) / 2;
 
-                    midiVal = center
-                            + int(std::round(shape * depth * range));
-                            midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
-
-                sendThrottledParamValue(i,
-                                        route.midiChannel,
-                                        param,
-                                        midiVal);
+                    midiVal = center + int(std::round(shape * depth * range));
                 }
-
                 else
                 {
-                    double uni = (shape + 1.0) * 0.5;
-                    uni = juce::jlimit(0.0, 1.0, uni);
-
+                    const double uni = juce::jlimit(0.0, 1.0, (shape + 1.0) * 0.5);
                     midiVal = param.minValue
-                            + int(std::round(uni * depth
-                            * (param.maxValue - param.minValue)));
-                            midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
-
-                sendThrottledParamValue(i,
-                                        route.midiChannel,
-                                        param,
-                                        midiVal);
+                            + int(std::round(uni * depth * (param.maxValue - param.minValue)));
                 }
 
+                midiVal = juce::jlimit(param.minValue, param.maxValue, midiVal);
+
+                sendThrottledParamValue(i, route.midiChannel, param, midiVal);
             }
-
-
 
         }
         
@@ -1184,7 +1163,6 @@ private:
             const int egValue = mapEgToMidi(envelopeComponent->tick(egMIDIvalue), paramId);
             const int egCh    = envelopeComponent->selectedEgOutChannel();
             
-
             if (egCh > 0 && paramId >= 0)
             {
                 const auto& param = syntaktParameters[paramId];
@@ -1200,6 +1178,120 @@ private:
         #if JUCE_DEBUG
         updateLfoRouteDebugLabel();
         #endif
+    }
+
+    inline bool advancePhase(double& phase, double phaseInc)
+    {
+        phase += phaseInc;
+        if (phase >= 1.0)
+        {
+            phase -= 1.0;
+            return true;
+        }
+        return false;
+    }
+
+    // waveforms
+    inline double lfoSine(double phase)
+    {
+        return std::sin(juce::MathConstants<double>::twoPi * phase);
+    }
+
+    inline double lfoTriangle(double phase)
+    {
+        // canonical triangle: 0 → +1 → 0 → -1 → 0
+        double t = phase - std::floor(phase);
+        return 4.0 * std::abs(t - 0.5) - 1.0;
+    }
+
+
+    inline double lfoSquare(double phase)
+    {
+        return (phase < 0.5) ? 1.0 : -1.0;
+    }
+
+    inline double lfoSaw(double phase)
+    {
+        return 2.0 * phase - 1.0;
+    }
+
+    inline double lfoRandom(juce::Random& rng)
+    {
+        return rng.nextDouble() * 2.0 - 1.0;
+    }
+
+    double computeWaveform(LfoShape shape,
+                           double phase,
+                           bool bipolar,
+                           bool invertPhase,
+                           juce::Random& rng)
+    {
+        // true phase inversion (180°)
+        if (invertPhase && shape != LfoShape::Saw)
+        {
+            phase += 0.5;
+            if (phase >= 1.0)
+                phase -= 1.0;
+        }
+
+        if (invertPhase && (shape == LfoShape::Saw))
+        {
+            phase = -phase;
+            if (phase <= 1.0)
+                phase += 1.0;
+        }
+
+        // phase alignment per shape
+        if (shape == LfoShape::Triangle && !bipolar)
+        {
+            phase += 0.25;
+            if (phase >= 1.0)
+                phase -= 1.0;
+        }
+
+        if (shape == LfoShape::Triangle && bipolar)
+        {
+            phase -= 0.25;
+            if (phase >= 1.0)
+                phase -= 1.0;
+        }
+
+        if (shape == LfoShape::Saw && bipolar)
+        {
+            phase += 0.5;
+            if (phase >= 1.0)
+                phase -= 1.0;
+        }
+
+        switch (shape)
+        {
+            case LfoShape::Sine:     return lfoSine(phase);
+            case LfoShape::Triangle: return lfoTriangle(phase);
+            case LfoShape::Square:   return lfoSquare(phase);
+            case LfoShape::Saw:      return lfoSaw(phase);
+            case LfoShape::Random:   return lfoRandom(rng);
+            default:                 return 0.0;
+        }
+    }
+
+    // ensure that LFO Waveforms start from correct offset (bipolar/unipolar)
+    double getWaveformStartPhase(int shapeId, bool bipolar, bool invert) const
+    {
+        double phase = 0.0;
+
+        if (!bipolar)
+        {
+            switch (static_cast<LfoShape>(shapeId))
+            {
+                case LfoShape::Sine:     phase = 0.75; break; // -1
+                case LfoShape::Triangle: phase = 0.25; break; // -1 ✅ FIX
+                case LfoShape::Square:   phase = 0.5;  break; // -1
+                case LfoShape::Saw:      phase = 0.0;  break; // -1
+                default: break;
+            }
+        }
+
+        return phase;
     }
 
     // shared throttling and MIDI send function
@@ -1248,6 +1340,7 @@ private:
                 midiMonitorWindow->pushEvent(msg, monitorInput);
             #endif
         }
+
         else
         {
             auto send = [&](int cc, int val)
@@ -1276,12 +1369,13 @@ private:
         {
             auto& route = lfoRoutes[i];
             lfoPhase[i] = getWaveformStartPhase(
-            shapeBox.getSelectedId(),
-            lfoRoutes[i].bipolar,
-            lfoRoutes[i].invertPhase
+                    shapeBox.getSelectedId(),
+                    lfoRoutes[i].bipolar,
+                    lfoRoutes[i].invertPhase
             );
 
             lfoRoutes[i].hasFinishedOneShot = false;
+            lfoRoutes[i].passedPeak = false;
         }
 
         lfoActive = false;
@@ -1296,19 +1390,22 @@ private:
             {
                 auto& route = lfoRoutes[i];
                 lfoPhase[i] = getWaveformStartPhase(
-                shapeBox.getSelectedId(),
+                    shapeBox.getSelectedId(),
                     lfoRoutes[i].bipolar,
                     lfoRoutes[i].invertPhase
                 );
 
                 lfoRoutes[i].hasFinishedOneShot = false;
+                lfoRoutes[i].passedPeak = false;
             }
 
         lfoActive = true;
         toggleLfo();
     }
 
-    double updateLfoRateFromBpm(double rateHz)
+
+
+        double updateLfoRateFromBpm(double rateHz)
     {
         const double bpm = midiClock.getCurrentBPM();
         const bool syncEnabled = (syncModeBox.getSelectedId() == 2);
@@ -1322,7 +1419,7 @@ private:
         return rateHz;
     }
 
-    // === BPM → Frequency Conversion ===
+    // BPM → Frequency Conversion
     double bpmToHz(double bpm)
     {
         if (bpm <= 0.0)
@@ -1382,39 +1479,6 @@ private:
             midiOut = juce::MidiOutput::openDevice(outputs[outIndex].identifier);
         }
     }
-
-    // ensure that LFO Waveforms start from 0 when unipolar
-    double getWaveformStartPhase (int shapeId,
-                              bool bipolar,
-                              bool invert) const
-    {
-        double phase = 0.0;
-
-        if (!bipolar)
-        {
-            // Unipolar → start at minimum
-            switch (shapeId)
-            {
-                case 1: phase = 0.75; break; // sine → -1
-                case 2: phase = 0.0;  break; // triangle → -1
-                case 3: phase = 0.5;  break; // square → -1
-                case 4: phase = 0.5;  break; // saw → min
-                default: phase = 0.0; break;
-            }
-        }
-
-        if (invert)
-        {
-            phase += 0.5;
-            if (phase >= 1.0)
-                phase -= 1.0;
-        }
-
-        return phase;
-    }
-
-
-
     #if JUCE_DEBUG
     void updateLfoRouteDebugLabel()
     {
@@ -1430,14 +1494,13 @@ private:
                  << " | ch=" << r.midiChannel
                  << " | param=" << r.parameterIndex
                  << " | bipolar=" << (r.bipolar ? "TRUE" : "FALSE")
+                 << " | invert=" << (r.invertPhase ? "TRUE" : "FALSE")
+                 << " | oneShot=" << (r.oneShot ? "TRUE" : "FALSE")
                  << "\n";
         }
 
         lfoRouteDebugLabel.setText(text, juce::dontSendNotification);
     }
     #endif
-
-
-
 
 };
