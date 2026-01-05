@@ -40,7 +40,7 @@ public:
         refreshMidiInputs();
         refreshMidiOutputs();
 
-        // === Sync Mode ===
+        // Sync Mode
         syncModeLabel.setText("Sync Source:", juce::dontSendNotification);
         addAndMakeVisible(syncModeLabel);
         addAndMakeVisible(syncModeBox);
@@ -67,14 +67,14 @@ public:
         if (midiInputBox.getNumItems() > 0)
             midiInputBox.setSelectedId(1);
 
-        // === BPM Display ===
+        // BPM Display
         bpmLabelTitle.setText("Detected BPM:", juce::dontSendNotification);
         addAndMakeVisible(bpmLabelTitle);
         bpmLabel.setText("--", juce::dontSendNotification);
         bpmLabel.setColour(juce::Label::textColourId, juce::Colours::aqua);
         addAndMakeVisible(bpmLabel);
 
-        // === Sync Division ===
+        // Sync Division
         divisionLabel.setText("Tempo Divider:", juce::dontSendNotification);
         addAndMakeVisible(divisionLabel);
 
@@ -91,7 +91,7 @@ public:
 
         divisionBox.setSelectedId(3); // default quarter note
 
-         // === Shape ===
+         // Shape
         shapeLabel.setText("LFO Shape:", juce::dontSendNotification);
         addAndMakeVisible(shapeLabel);
         addAndMakeVisible(shapeBox);
@@ -102,7 +102,7 @@ public:
         shapeBox.addItem("Random", 5);
         shapeBox.setSelectedId(1);
 
-        // === Rate ===
+        // Rate
         rateLabel.setText("Rate:", juce::dontSendNotification);
         addAndMakeVisible(rateLabel);
         addAndMakeVisible(rateSlider);
@@ -110,20 +110,20 @@ public:
         rateSlider.setValue(2.0);
         rateSlider.setTextValueSuffix(" Hz");
 
-        // === Depth ===
+        // Depth
         depthLabel.setText("Depth:", juce::dontSendNotification);
         addAndMakeVisible(depthLabel);
         addAndMakeVisible(depthSlider);
         depthSlider.setRange(0.0, 1.0, 0.01);
         depthSlider.setValue(1.0);
 
-          // === Start Button ===
+          // Start Button
         addAndMakeVisible(startButton);
         startButton.setButtonText("Start LFO");
         startButton.onClick = [this] { toggleLfo(); };
 
 
-        // === Note-On Restart Controls ===
+        // Note-On Restart Controls
         addAndMakeVisible(noteRestartToggle);
         noteRestartToggle.setToggleState(false, juce::dontSendNotification);
 
@@ -148,19 +148,32 @@ public:
                 if (!enabled)
                 {
                     // Hard-disable one-shot state
-                    routeOneShotToggles[i].setToggleState(false,
-                                                           juce::dontSendNotification);
+                    routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
 
                     lfoRoutes[i].oneShot = false;
                     lfoRoutes[i].hasFinishedOneShot = false;
                 }
             }
 
-            // Optional: layout refresh
+            // Stop-on-Note-Off UI logic
+            noteOffStopToggle.setVisible(enabled);
+            noteOffStopToggle.setEnabled(enabled);
+            addAndMakeVisible(noteOffStopToggle);
+
+            if (!enabled)
+            {
+                noteOffStopToggle.setToggleState(false, juce::dontSendNotification);
+                noteOffStopToggle.setVisible(enabled);
+                noteOffStopToggle.setEnabled(enabled);
+            }
+
+            // layout refresh
             juce::MessageManager::callAsync([this]() { resized(); });
         };
 
-        //noteSourceChannelBox.onChange = [this]() { updateNoteOnListener(); };
+        noteOffStopToggle.setButtonText("Stop on Note-Off");
+        noteOffStopToggle.setVisible(noteRestartToggle.getToggleState());
+        noteOffStopToggle.setEnabled(false);
 
         // Debug labels
         #if JUCE_DEBUG
@@ -317,7 +330,7 @@ public:
         // Initialize the atomic variable with current selection
         noteRestartChannel.store(noteSourceChannelBox.getSelectedId(), std::memory_order_release);
 
-        // === Settings Button ===
+        // Settings Button
         addAndMakeVisible(settingsButton);
         settingsButton.setButtonText("Settings"); // or "Opt" for a plainer look
         settingsButton.setTooltip("Open settings menu");
@@ -410,7 +423,7 @@ public:
 
         #endif
 
-        // === Timer ===
+        // Timer
         startTimerHz(100); // 100Hz refresh
 
         // start size
@@ -434,7 +447,7 @@ public:
 
         auto area = getLocalBounds().reduced(12);
 
-        // ---- Horizontal split ----
+        // Horizontal split
         auto lfoColumn = area.removeFromLeft(lfoWidth);
         area.removeFromLeft(columnSpacing);
         auto egColumn  = area.removeFromLeft(egWidth);
@@ -579,8 +592,6 @@ public:
             lfoAreaContent.removeFromTop(10);
         }
 
-
-
         placeRow(shapeLabel, shapeBox);
 
         lfoAreaContent.removeFromTop(6);
@@ -602,6 +613,21 @@ public:
         };
         placeRowToggle(noteRestartToggle, noteSourceChannelBox);
 
+        auto placeSingleToggleRow = [&](juce::ToggleButton& toggleButton)
+        {
+            auto row = lfoAreaContent.removeFromTop(rowHeight);
+
+            // Align with other left-side toggles
+            toggleButton.setBounds(row.removeFromLeft(labelWidth));
+
+            lfoAreaContent.removeFromTop(6);
+            area.removeFromTop(10);
+        };
+
+        // Stop-on-Note-Off toggle directly underneath
+        if (noteOffStopToggle.isVisible())
+            placeSingleToggleRow(noteOffStopToggle);
+
         #if JUCE_DEBUG
         auto placeDebugRow = [&](juce::Label& title, juce::Label& midiValues)
         {
@@ -614,7 +640,7 @@ public:
         placeDebugRow(noteDebugTitle, noteDebugLabel);
         #endif
 
-        // === setting button ===
+        // setting button
         auto bounds = getLocalBounds();
         auto size = 24; // small square button
         settingsButton.setBounds(bounds.removeFromBottom(10 + size)
@@ -661,7 +687,7 @@ public:
 
 
 private:
-    // === UI Components ===
+    // UI Components
     juce::GroupComponent lfoGroup;
 
     juce::Label midiOutputLabel, midiInputLabel, syncModeLabel;
@@ -674,11 +700,13 @@ private:
 
     //Note-On retrig on/off and source channel
     juce::ToggleButton noteRestartToggle { "Restart on Note-On" };
+    juce::ToggleButton noteOffStopToggle { "Stop on Note-Off" };
+
     juce::ComboBox noteSourceChannelBox; // source channel for Note-On listening
 
     juce::TextButton startButton;
 
-    // === MIDI ===
+    // MIDI
     std::unique_ptr<juce::MidiOutput> midiOut;
     MidiClockHandler midiClock;
 
@@ -693,6 +721,7 @@ private:
     std::atomic<int> noteRestartChannel { 0 }; // 1–16, 0 = disabled
 
     std::atomic<bool> requestLfoRestart { false };
+    std::atomic<bool> requestLfoStop { false };
 
 
     //DEBUG
@@ -702,7 +731,7 @@ private:
     juce::Label noteDebugLabel;
     #endif
 
-    // === Multi-CC Routing ===
+    // Multi-CC Routing
     static constexpr int maxRoutes = 3;
     struct LfoRoute { 
         int midiChannel = 0;
@@ -742,10 +771,10 @@ private:
         Random
     };
 
-    // === Setting Pop-Up ===
+    // Setting Pop-Up
     juce::TextButton settingsButton;
 
-    // === LFO State ===
+    // LFO State
     double phase = 0.0;
     double sampleRate = 100.0;
     juce::Random random;
@@ -757,14 +786,14 @@ private:
 
     double oneShotPhaseAccum = 0.0;
 
-    // === BPM smoothing / throttling ===
+    // BPM smoothing / throttling
     double displayedBpm = 0.0;
     juce::int64 lastBpmUpdateMs = 0;
 
     // EG
     std::unique_ptr<EnvelopeComponent> envelopeComponent;
 
-    // settings - Dithering and MIDI throttle ===
+    // settings - Dithering and MIDI throttle
     std::unordered_map<int, int> lastSentValuePerParam;  // key: param ID or CC number
     int changeThreshold = 1; // difference needed before sending
 
@@ -894,7 +923,7 @@ private:
 
         void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& msg) override
         {
-            // --- MIDI CLOCK ---
+            // MIDI CLOCK
             if (owner.syncModeBox.getSelectedId() == 2)
             {
                 owner.handleIncomingMessage(msg); 
@@ -910,6 +939,13 @@ private:
             {
                 owner.pendingNoteChannel.store(msg.getChannel(), std::memory_order_relaxed);
                 owner.pendingNoteOff.store(true, std::memory_order_release);
+
+                // Request LFO stop only if UI allows it
+                if (owner.noteRestartToggle.getToggleState()
+                    && owner.noteOffStopToggle.getToggleState())
+                {
+                    owner.requestLfoStop.store(true, std::memory_order_release);
+                }
             }
         }
     };
@@ -982,7 +1018,7 @@ private:
         }
     }
 
-    // === Timer Callback ===
+    // Timer Callback
     void timerCallback() override
     {
         if (!midiOut)
@@ -1015,6 +1051,21 @@ private:
             }
         }
 
+        // --- Stop LFO on Note-Off ---
+        if (requestLfoStop.exchange(false))
+        {
+            lfoActive = false;
+            startButton.setButtonText("Start LFO");
+
+            // reset phases for next start
+            for (int i = 0; i < maxRoutes; ++i)
+            {
+                lfoRoutes[i].hasFinishedOneShot = false;
+                lfoRoutes[i].passedPeak = false;
+            }
+        }
+
+        // EG trig
         if (pendingNoteOff.exchange(false))
         {
             if (envelopeComponent && envelopeComponent->isEgEnabled())
@@ -1365,7 +1416,7 @@ private:
         }
     }
 
-    // === MIDI Transport Callbacks ===
+    // MIDI Transport Callbacks
     void handleMidiStart() override
     {
         // Reset LFO phase when sequencer starts
