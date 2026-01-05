@@ -649,7 +649,7 @@ public:
         lfoAreaContent.removeFromTop(40);
 
         auto scopeBounds = lfoAreaContent.removeFromTop(100)
-                                         .withSizeKeepingCentre(160, 160);
+                                         .withSizeKeepingCentre(130, 130);
 
         lfoScope->setBounds(scopeBounds);
 
