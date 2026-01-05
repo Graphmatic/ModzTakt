@@ -288,11 +288,8 @@ public:
                     lfoRoutes[i].hasFinishedOneShot = false;
             };
 
-
-
             routeInvertToggles[i].setToggleState(false, juce::dontSendNotification);
             routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
-
 
             // set initial values
             if (i == 0)
@@ -316,8 +313,6 @@ public:
             lfoRoutes[i].oneShot     = false;
             lfoRoutes[i].hasFinishedOneShot = false;
 
-            
-
             // Set initial visibility
             const bool enabled = (routeChannelBoxes[i].getSelectedId() != 1);
             routeParameterBoxes[i].setVisible(enabled);
@@ -332,13 +327,6 @@ public:
         // Initialize the atomic variable with current selection
         noteRestartChannel.store(noteSourceChannelBox.getSelectedId(), std::memory_order_release);
 
-        // Oscilloscope modal switch
-        //juce::Image scopeIcon = juce::ImageCache::getFromMemory(BinaryData::scope_png, BinaryData::scope_pngSize);
-
-        // scopeButton.setButtonText("Scope");
-
-        // addAndMakeVisible(scopeButton);
-
         addAndMakeVisible(scopeButton);
 
         scopeButton.setToggleable(true);
@@ -350,6 +338,7 @@ public:
         {
             if (scopeButton.getToggleState())
             {
+                lfoRoutesToScope[0] = true;
                 openScope();
             }
         };
@@ -522,12 +511,12 @@ public:
         headerFlex.flexDirection = juce::FlexBox::Direction::row;
         headerFlex.alignItems = juce::FlexBox::AlignItems::flexEnd;
 
-        // --- spacers for Route / Channel / Parameter columns ---
+        // spacers for Route / Channel / Parameter columns
         headerFlex.items.add(juce::FlexItem().withWidth(routeLabelWidth + columnGap));
         headerFlex.items.add(juce::FlexItem().withWidth(channelBoxWidth + columnGap));
         headerFlex.items.add(juce::FlexItem().withWidth(parameterBoxWidth + columnGap));
 
-        // --- checkbox headers ---
+        // checkbox headers
         headerFlex.items.add(
             juce::FlexItem(bipolarLabel)
                 .withWidth(checkboxColumnWidth)
@@ -688,7 +677,6 @@ public:
         settingsButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::darkgrey.withAlpha(0.3f));
         settingsButton.setClickingTogglesState(false);
 
-
         //MIDI MONITOR
         #if JUCE_DEBUG
         auto areaMon = getLocalBounds();
@@ -731,7 +719,7 @@ public:
             return;
         }
 
-        auto* scope = new ScopeModalComponent(lastLfoValue);
+        auto* scope = new ScopeModalComponent<maxRoutes>(lastLfoRoutesValues, lfoRoutesToScope);
 
         scopeWindow.reset(new ScopeWindow(
             scope,
@@ -742,9 +730,6 @@ public:
         ));
     }
 
-
-
-
 private:
     // UI Components
     juce::GroupComponent lfoGroup;
@@ -754,7 +739,7 @@ private:
     juce::Label parameterLabel, shapeLabel, rateLabel, depthLabel, channelLabel, bipolarLabel, invertPhaseLabel, oneShotLabel;
 
     juce::ComboBox midiOutputBox, midiInputBox, syncModeBox, divisionBox;
-    juce::ComboBox shapeBox; //parameterBox
+    juce::ComboBox shapeBox;
     juce::Slider rateSlider, depthSlider;
 
     //Note-On retrig on/off and source channel
@@ -781,7 +766,6 @@ private:
 
     std::atomic<bool> requestLfoRestart { false };
     std::atomic<bool> requestLfoStop { false };
-
 
     //DEBUG
     #if JUCE_DEBUG
@@ -821,10 +805,6 @@ private:
     bool showRouteDebugLabel = false;
     #endif
 
-    // Oscilloscope
-    //std::unique_ptr<LfoScopeComponent> lfoScope;
-    //std::unique_ptr<juce::DialogWindow> scopeWindow;
-
     juce::TextButton scopeButton { "Scope" };
 
     enum class LfoShape
@@ -856,9 +836,14 @@ private:
     juce::int64 lastBpmUpdateMs = 0;
 
     // Oscilloscope
-    std::atomic<float> lastLfoValue { 0.0f };
-    std::unique_ptr<ScopeWindow> scopeWindow;
+    std::array<std::atomic<float>, maxRoutes> lastLfoRoutesValues { 0.0f, 0.0f, 0.0f };
+    std::array<bool, maxRoutes> lfoRoutesToScope { false, false, false };
 
+    //std::atomic<float> lastLfoValue { 0.0f };
+    //std::array<lastLfoValue, maxRoutes> lastLfoRoutesValues;
+
+    std::unique_ptr<ScopeWindow> scopeWindow;
+    //std::array<bool, maxRoutes> lfoRouteToScope { false, false, false };
 
     // EG
     std::unique_ptr<EnvelopeComponent> envelopeComponent;
@@ -1121,7 +1106,7 @@ private:
             }
         }
 
-        // --- Stop LFO on Note-Off ---
+        // Stop LFO on Note-Off
         if (requestLfoStop.exchange(false))
         {
             lfoActive = false;
@@ -1279,7 +1264,11 @@ private:
                 sendThrottledParamValue(i, route.midiChannel, param, midiVal);
 
                 // Oscilloscope
-                lastLfoValue.store(shape * depth, std::memory_order_relaxed);
+                if (lfoRoutesToScope[i])
+                {
+                    lastLfoRoutesValues[i].store(shape * depth, std::memory_order_relaxed);
+                }
+                // lastLfoValue.store(shape * depth, std::memory_order_relaxed);
             }
 
         }
@@ -1429,28 +1418,28 @@ private:
                                 const SyntaktParameter& param,
                                 int midiValue)
     {
-        // -------- Build per-route + per-parameter key --------
+        // Build per-route + per-parameter key
         const int paramKey =
             (routeIndex << 16) |
             (param.isCC ? 0x1000 : 0x2000) |
             (param.isCC ? param.ccNumber
                         : ((param.nrpnMsb << 7) | param.nrpnLsb));
 
-        // -------- Value change threshold --------
+        // Value change threshold
         const int lastVal = lastSentValuePerParam[paramKey];
         if (std::abs(midiValue - lastVal) < changeThreshold)
             return;
 
         lastSentValuePerParam[paramKey] = midiValue;
 
-        // -------- Time-based anti-flood --------
+        // Time-based anti-flood
         const double now = juce::Time::getMillisecondCounterHiRes();
         if (now - lastSendTimePerParam[paramKey] < msFloofThreshold)
             return;
 
         lastSendTimePerParam[paramKey] = now;
 
-        // -------- Split value if NRPN --------
+        // Split value if NRPN
         const int valueMSB = (midiValue >> 7) & 0x7F;
         const int valueLSB = midiValue & 0x7F;
 
@@ -1576,7 +1565,7 @@ private:
         return beatsPerSecond * multiplier;
     }
 
-    //Map EG value to MIDI
+    // Map EG value to MIDI
     int mapEgToMidi(double egValue, int paramId)
     {
         const auto& param = syntaktParameters[paramId];
@@ -1594,7 +1583,6 @@ private:
         }
     }
 
-
     void openSelectedMidiOutput()
     {
         midiOut.reset();
@@ -1607,6 +1595,7 @@ private:
             midiOut = juce::MidiOutput::openDevice(outputs[outIndex].identifier);
         }
     }
+
     #if JUCE_DEBUG
     void updateLfoRouteDebugLabel()
     {
@@ -1631,8 +1620,6 @@ private:
 
         lfoRouteDebugLabel.setText(text, juce::dontSendNotification);
         }
-        
     }
     #endif
-
 };

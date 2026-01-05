@@ -6,14 +6,14 @@ class ScopeWindow : public juce::DocumentWindow
 public:
     ScopeWindow(juce::Component* content,
                 std::function<void()> onCloseCallback)
-        : juce::DocumentWindow("LFO Scope",
+        : juce::DocumentWindow("Scope",
                                juce::Colours::black,
                                juce::DocumentWindow::closeButton),
           onClose(std::move(onCloseCallback))
     {
         setUsingNativeTitleBar(false);
         setContentOwned(content, true);
-        setResizable(false, false);
+        setResizable(true, false);
 
         centreWithSize(160, 180);
 
