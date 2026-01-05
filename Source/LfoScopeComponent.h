@@ -21,28 +21,27 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-
-
         auto r = getLocalBounds().toFloat();
+        
         auto centre = r.getCentre();
         const float radius = juce::jmin(r.getWidth(), r.getHeight()) * 0.5f - 2.0f;
 
-        // ---- Background ----
+        // Background
         g.setColour(juce::Colours::darkgrey);
         g.fillEllipse(r);
 
-        // --- Circular clip ---
+        // Circular clip
         juce::Path clipPath;
         clipPath.addEllipse(r);
 
         g.saveState();                  // ⬅ important
         g.reduceClipRegion(clipPath);   // ⬅ clip to circle
 
-        // ---- CRT glow ----
+        // CRT glow
         g.setColour(juce::Colour(0xff003300));
         g.drawEllipse(r, 2.0f);
 
-        // ---- Waveform ----
+        // Waveform
         juce::Path p;
         const int N = bufferSize;
 
@@ -70,10 +69,6 @@ public:
         g.strokePath(p, juce::PathStrokeType(1.5f));
 
         g.restoreState();               // ⬅ restore unclipped state
-
-        // bezel
-        // g.setColour(juce::Colours::white);
-        // g.drawEllipse(r, 0.5f);
     }
 
     void resized() override {}
