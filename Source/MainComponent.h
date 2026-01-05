@@ -129,7 +129,7 @@ public:
 
         addAndMakeVisible(noteSourceChannelBox);
         noteSourceChannelBox.setTextWhenNothingSelected("Source Channel");
-        //noteSourceChannelBox.onChange = [this]() { updateNoteSourceChannel(); };
+
         noteSourceChannelBox.onChange = [this]()
         {
             noteRestartChannel.store(noteSourceChannelBox.getSelectedId(), std::memory_order_release);
@@ -142,7 +142,8 @@ public:
             for (int i = 0; i < maxRoutes; ++i)
             {
                 // Hide One-Shot UI if restart is OFF
-                routeOneShotToggles[i].setVisible(enabled);
+                if (routeChannelBoxes[i].getSelectedId() != 1)
+                    routeOneShotToggles[i].setVisible(enabled);
 
                 if (!enabled)
                 {
@@ -226,7 +227,10 @@ public:
                 routeParameterBoxes[i].setVisible(enabled);
                 routeBipolarToggles[i].setVisible(enabled);
                 routeInvertToggles[i].setVisible(enabled);
-                routeOneShotToggles[i].setVisible(noteRestartToggle.getToggleState());
+                if (!enabled)
+                    routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
+                routeOneShotToggles[i].setVisible(enabled && noteRestartToggle.getToggleState());
+
                 updateNoteSourceChannel();
                 
                 // Defer resized() to avoid blocking during ComboBox interaction
