@@ -334,14 +334,11 @@ public:
         scopeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
         scopeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
 
-        scopeButton.onClick = [this]()
+        scopeButton.onClick = [this]
         {
-            if (scopeButton.getToggleState())
-            {
-                lfoRoutesToScope[0] = true;
-                openScope();
-            }
+            toggleScope();
         };
+
 
         // Settings Button
         addAndMakeVisible(settingsButton);
@@ -711,12 +708,17 @@ public:
     }
 
     // Oscilloscope pop-up view (not modal)
-    void openScope()
+    void toggleScope()
     {
         if (scopeWindow)
         {
-            scopeWindow->toFront(true);
+            scopeWindow.reset();  // closes window
             return;
+        }
+        else
+        {
+            lfoRoutesToScope.fill(false);
+            lfoRoutesToScope[0] = true; // Display route 1 by default
         }
 
         auto* scope = new ScopeModalComponent<maxRoutes>(lastLfoRoutesValues, lfoRoutesToScope);

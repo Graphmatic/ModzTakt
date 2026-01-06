@@ -1,7 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
 
-
 template <size_t N>
 
 class ScopeModalComponent : public juce::Component,
@@ -26,7 +25,13 @@ public:
             {
                 this->lfoRoutesEnabled[i] =
                     routeButtons[i].getToggleState();
+
+                if (anyRouteEnabled())
+                    startTimerHz(60);
+                else
+                    stopTimer();
             };
+
         }
 
         startTimerHz(60);
@@ -43,6 +48,14 @@ public:
             b.setBounds(controlArea.removeFromLeft(40).reduced(4));
         }
 
+    }
+
+    void visibilityChanged() override
+    {
+        if (isVisible() && anyRouteEnabled())
+            startTimerHz(60);
+        else
+            stopTimer();
     }
 
     void paint(juce::Graphics& g) override
@@ -105,15 +118,21 @@ public:
     }
 
 private:
+    
     void timerCallback() override
     {
+        if (!anyRouteEnabled())
+            return;   // sleep completely
+
         for (size_t i = 0; i < lfoValues.size(); ++i)
         {
             if (lfoRoutesEnabled[i])
                 pushSample(lfoValues[i].load(std::memory_order_relaxed), i);
         }
+
         repaint();
     }
+
 
     // Push a new LFO sample (-1..+1 expected)
     void pushSample(float v, size_t lfoIndex)
@@ -121,6 +140,16 @@ private:
         v = juce::jlimit(-1.0f, 1.0f, v);
         buffers[lfoIndex][writeIndices[lfoIndex]] = v;
         writeIndices[lfoIndex] = (writeIndices[lfoIndex] + 1) % bufferSize;
+    }
+
+    // used to disable scope when unused
+    bool anyRouteEnabled() const
+    {
+        for (bool b : lfoRoutesEnabled)
+            if (b)
+                return true;
+
+        return false;
     }
 
     LFOValuesArray& lfoValues;
