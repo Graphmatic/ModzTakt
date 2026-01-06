@@ -710,27 +710,24 @@ public:
     // Oscilloscope pop-up view (not modal)
     void toggleScope()
     {
-        if (scopeWindow)
+        if (scopeOverlay)
         {
-            scopeWindow.reset();  // closes window
+            removeChildComponent(scopeOverlay.get());
+            scopeOverlay.reset();
             return;
         }
-        else
-        {
-            lfoRoutesToScope.fill(false);
-            lfoRoutesToScope[0] = true; // Display route 1 by default
-        }
 
-        auto* scope = new ScopeModalComponent<maxRoutes>(lastLfoRoutesValues, lfoRoutesToScope);
+        scopeOverlay.reset(new ScopeModalComponent<maxRoutes>(
+            lastLfoRoutesValues,
+            lfoRoutesToScope));
 
-        scopeWindow.reset(new ScopeWindow(
-            scope,
-            [this]()
-            {
-                scopeWindow.reset();
-            }
-        ));
+        addAndMakeVisible(scopeOverlay.get());
+
+        scopeOverlay->setSize(300, 300);
+        scopeOverlay->setCentrePosition(getWidth() / 2, getHeight() / 2);
+        scopeOverlay->toFront(true);
     }
+
 
 private:
     // UI Components
@@ -838,14 +835,12 @@ private:
     juce::int64 lastBpmUpdateMs = 0;
 
     // Oscilloscope
+    std::unique_ptr<ScopeModalComponent<maxRoutes>> scopeOverlay;
+
     std::array<std::atomic<float>, maxRoutes> lastLfoRoutesValues { 0.0f, 0.0f, 0.0f };
     std::array<bool, maxRoutes> lfoRoutesToScope { false, false, false };
 
-    //std::atomic<float> lastLfoValue { 0.0f };
-    //std::array<lastLfoValue, maxRoutes> lastLfoRoutesValues;
-
     std::unique_ptr<ScopeWindow> scopeWindow;
-    //std::array<bool, maxRoutes> lfoRouteToScope { false, false, false };
 
     // EG
     std::unique_ptr<EnvelopeComponent> envelopeComponent;

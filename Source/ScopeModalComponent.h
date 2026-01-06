@@ -31,24 +31,47 @@ public:
                 else
                     stopTimer();
             };
-
         }
-
-        startTimerHz(60);
+        setOpaque(false);
     }
 
-    void resized()
+    // capture click only inside the circular shape of window
+    bool hitTest(int x, int y) override
+    {
+        auto r = getLocalBounds().toFloat();
+        auto centre = r.getCentre();
+        auto radius = r.getWidth() * 0.5f;
+
+        juce::Point<float> p((float)x, (float)y);
+        return p.getDistanceFrom(centre) <= radius;
+    }
+
+    void resized() override
     {
         auto area = getLocalBounds();
 
-        auto controlArea = area.removeFromBottom(40);
+        // Inset everything so it stays inside the circle
+        constexpr int margin = 24;
+        area.reduce(margin, margin);
+
+        // Bottom area for toggles
+        auto toggleArea = area.removeFromBottom(32);
+
+        const int buttonWidth = 32;
+        const int spacing = 10;
+
+        int totalWidth = int(routeButtons.size()) * buttonWidth
+                         + (int(routeButtons.size()) - 1) * spacing;
+
+        int x = toggleArea.getCentreX() - totalWidth / 2;
 
         for (auto& b : routeButtons)
         {
-            b.setBounds(controlArea.removeFromLeft(40).reduced(4));
+            b.setBounds(x, toggleArea.getY(), buttonWidth, toggleArea.getHeight());
+            x += buttonWidth + spacing;
         }
-
     }
+
 
     void visibilityChanged() override
     {
@@ -70,9 +93,12 @@ public:
             auto centre = r.getCentre();
             const float radius = juce::jmin(r.getWidth(), r.getHeight()) * 0.5f - 2.0f;
 
-            // Background and CRT glow (once)
+            // Background and CRT 
+            // g.fillAll(juce::Colours::white);
+
             g.setColour(juce::Colours::darkgrey);
             g.fillEllipse(r);
+
             g.saveState();
             {
                 juce::Path clipPath;
