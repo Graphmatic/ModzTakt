@@ -1314,9 +1314,7 @@ private:
                 {
                     lastLfoRoutesValues[i].store(shape * depth, std::memory_order_relaxed);
                 }
-                // lastLfoValue.store(shape * depth, std::memory_order_relaxed);
             }
-
         }
         
         if (envelopeComponent && envelopeComponent->isEgEnabled())
@@ -1366,7 +1364,6 @@ private:
         double t = phase - std::floor(phase);
         return 4.0 * std::abs(t - 0.5) - 1.0;
     }
-
 
     inline double lfoSquare(double phase)
     {
@@ -1566,9 +1563,7 @@ private:
         toggleLfo();
     }
 
-
-
-        double updateLfoRateFromBpm(double rateHz)
+    double updateLfoRateFromBpm(double rateHz)
     {
         const double bpm = midiClock.getCurrentBPM();
         const bool syncEnabled = (syncModeBox.getSelectedId() == 2);
