@@ -334,14 +334,11 @@ public:
         scopeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
         scopeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
 
-        scopeButton.onClick = [this]()
+        scopeButton.onClick = [this]
         {
-            if (scopeButton.getToggleState())
-            {
-                lfoRoutesToScope[0] = true;
-                openScope();
-            }
+            toggleScope();
         };
+
 
         // Settings Button
         addAndMakeVisible(settingsButton);
@@ -437,11 +434,7 @@ public:
         #endif
 
         // Timer
-        startTimerHz(100); // 100Hz refresh
-
-        // start size
-        setSize(1000, 800);
-
+        startTimerHz(100); // 100Hz refresh  
     }
 
     ~MainComponent() override
@@ -711,24 +704,55 @@ public:
     }
 
     // Oscilloscope pop-up view (not modal)
-    void openScope()
+    void toggleScope()
     {
-        if (scopeWindow)
+        if (scopeOverlay)
         {
-            scopeWindow->toFront(true);
+            closeScope();
             return;
         }
 
-        auto* scope = new ScopeModalComponent<maxRoutes>(lastLfoRoutesValues, lfoRoutesToScope);
+        lfoRoutesToScope[0] = true; // first route active by default
 
-        scopeWindow.reset(new ScopeWindow(
-            scope,
-            [this]()
-            {
-                scopeWindow.reset();
-            }
-        ));
+        scopeOverlay.reset(new ScopeModalComponent<maxRoutes>(
+            lastLfoRoutesValues,
+            lfoRoutesToScope));
+
+        scopeOverlay->onAllRoutesDisabled = [this]()
+        {
+            toggleScope();   // closes and cleans up
+        };
+
+        addAndMakeVisible(scopeOverlay.get());
+
+        constexpr int scopeSize = 136;
+        constexpr int bottomOffset = 45;
+
+        // Position relative to LFO area
+        auto lfoBounds = getLocalBounds()
+                            .withHeight(800).reduced(12)
+                            .removeFromLeft(450);  //LFO area width
+
+        scopeOverlay->setBounds(
+            lfoBounds.getCentreX() - scopeSize / 2,
+            lfoBounds.getBottom() - bottomOffset - scopeSize,
+            scopeSize,
+            scopeSize
+        );
+
+        scopeOverlay->toFront(true);
     }
+
+    void closeScope()
+    {
+        if (!scopeOverlay)
+            return;
+
+        lfoRoutesToScope.fill(false);
+        removeChildComponent(scopeOverlay.get());
+        scopeOverlay.reset();
+    }
+
 
 private:
     // UI Components
@@ -836,14 +860,12 @@ private:
     juce::int64 lastBpmUpdateMs = 0;
 
     // Oscilloscope
+    std::unique_ptr<ScopeModalComponent<maxRoutes>> scopeOverlay;
+
     std::array<std::atomic<float>, maxRoutes> lastLfoRoutesValues { 0.0f, 0.0f, 0.0f };
     std::array<bool, maxRoutes> lfoRoutesToScope { false, false, false };
 
-    //std::atomic<float> lastLfoValue { 0.0f };
-    //std::array<lastLfoValue, maxRoutes> lastLfoRoutesValues;
-
     std::unique_ptr<ScopeWindow> scopeWindow;
-    //std::array<bool, maxRoutes> lfoRouteToScope { false, false, false };
 
     // EG
     std::unique_ptr<EnvelopeComponent> envelopeComponent;

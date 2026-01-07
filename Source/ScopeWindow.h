@@ -5,26 +5,39 @@ class ScopeWindow : public juce::DocumentWindow
 {
 public:
     ScopeWindow(juce::Component* content,
-                std::function<void()> onCloseCallback)
-        : juce::DocumentWindow("Scope",
-                               juce::Colours::black,
-                               juce::DocumentWindow::closeButton),
-          onClose(std::move(onCloseCallback))
+                             std::function<void()> onClose)
+        : juce::DocumentWindow("",
+                               juce::Colours::transparentBlack,
+                               juce::DocumentWindow::closeButton)
     {
-        setUsingNativeTitleBar(false);
+        setUsingNativeTitleBar(false);   // ⬅ remove OS title bar
+        setTitleBarHeight(0);            // ⬅ no JUCE title bar
+        setResizable(false, false);
+        setOpaque(false);                // ⬅ allow transparency
+        setDropShadowEnabled(true);
+
         setContentOwned(content, true);
-        setResizable(true, false);
 
-        centreWithSize(160, 180);
-
+        centreWithSize(240, 240);
         setVisible(true);
-        setAlwaysOnTop(true);
+    }
+
+    // make window circular
+    void resized()
+    {
+        DocumentWindow::resized();
+
+        if (auto* peer = getPeer())
+        {
+            auto area = getLocalBounds().toFloat();
+            juce::Path circle;
+            circle.addEllipse(area);
+        }
     }
 
     void closeButtonPressed() override
     {
-        if (onClose)
-            onClose();
+        setVisible(false);
     }
 
 private:

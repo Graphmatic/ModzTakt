@@ -71,15 +71,18 @@ public:
                                                           .findColour (juce::ResizableWindow::backgroundColourId),
                               DocumentWindow::allButtons)
         {
-            setUsingNativeTitleBar (true);
+            setUsingNativeTitleBar (false);
             setContentOwned (new MainComponent(), true);
 
            #if JUCE_IOS || JUCE_ANDROID
             setFullScreen (true);
            #else
-            setResizable (true, true);
+            // app size
+            setResizable(false, false);      // width only
+            setResizeLimits(1000, 800, 1920, 800); // minW, minH, maxW, maxH
+
             centreWithSize (getWidth(), getHeight());
-           #endif
+            #endif
 
             setVisible (true);
         }

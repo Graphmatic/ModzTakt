@@ -1,7 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
 
-
 template <size_t N>
 
 class ScopeModalComponent : public juce::Component,
@@ -22,27 +21,71 @@ public:
             routeButtons[i].setToggleState(lfoRoutesEnabled[i],
                                            juce::dontSendNotification);
 
-            routeButtons[i].onClick = [this, i]
+            routeButtons[i].onClick = [this, i]()
             {
-                this->lfoRoutesEnabled[i] =
-                    routeButtons[i].getToggleState();
+                this->lfoRoutesEnabled[i] = routeButtons[i].getToggleState();
+
+                if (!anyRouteEnabled())
+                {
+                    stopTimer();
+
+                    if (onAllRoutesDisabled)
+                        onAllRoutesDisabled();
+                }
+                else if (!isTimerRunning())
+                {
+                    startTimerHz(60);
+                }
             };
         }
-
-        startTimerHz(60);
+        setOpaque(false);
     }
 
-    void resized()
+    // capture click only inside the circular shape of window
+    bool hitTest(int x, int y) override
+    {
+        auto r = getLocalBounds().toFloat();
+        auto centre = r.getCentre();
+        auto radius = r.getWidth() * 0.5f;
+
+        juce::Point<float> p((float)x, (float)y);
+        return p.getDistanceFrom(centre) <= radius;
+    }
+
+    void resized() override
     {
         auto area = getLocalBounds();
 
-        auto controlArea = area.removeFromBottom(40);
+        // Inset everything so it stays inside the circle
+        constexpr int margin = 28;
+        area.reduce(margin, margin);
+
+        // Bottom area for toggles
+        auto toggleArea = area.removeFromBottom(16);
+
+        const int buttonWidth = 24;
+        const int spacing = 2;
+
+        int totalWidth = int(routeButtons.size()) * buttonWidth
+                         + (int(routeButtons.size()) - 1) * spacing;
+
+        int x = toggleArea.getCentreX() - totalWidth / 2;
 
         for (auto& b : routeButtons)
         {
-            b.setBounds(controlArea.removeFromLeft(40).reduced(4));
+            x += 1; // left margin offset
+            b.setBounds(x, toggleArea.getY() + 15, buttonWidth, toggleArea.getHeight());
+            x += buttonWidth + spacing;
         }
+    }
 
+
+    void visibilityChanged() override
+    {
+        if (isVisible() && anyRouteEnabled())
+            startTimerHz(60);
+        else
+            stopTimer();
     }
 
     void paint(juce::Graphics& g) override
@@ -57,9 +100,9 @@ public:
             auto centre = r.getCentre();
             const float radius = juce::jmin(r.getWidth(), r.getHeight()) * 0.5f - 2.0f;
 
-            // Background and CRT glow (once)
             g.setColour(juce::Colours::darkgrey);
             g.fillEllipse(r);
+
             g.saveState();
             {
                 juce::Path clipPath;
@@ -104,16 +147,24 @@ public:
         }
     }
 
+    std::function<void()> onAllRoutesDisabled;
+
 private:
+    
     void timerCallback() override
     {
+        if (!anyRouteEnabled())
+            return;   // sleep completely
+
         for (size_t i = 0; i < lfoValues.size(); ++i)
         {
             if (lfoRoutesEnabled[i])
                 pushSample(lfoValues[i].load(std::memory_order_relaxed), i);
         }
+
         repaint();
     }
+
 
     // Push a new LFO sample (-1..+1 expected)
     void pushSample(float v, size_t lfoIndex)
@@ -121,6 +172,16 @@ private:
         v = juce::jlimit(-1.0f, 1.0f, v);
         buffers[lfoIndex][writeIndices[lfoIndex]] = v;
         writeIndices[lfoIndex] = (writeIndices[lfoIndex] + 1) % bufferSize;
+    }
+
+    // used to disable scope when unused
+    bool anyRouteEnabled() const
+    {
+        for (bool b : lfoRoutesEnabled)
+            if (b)
+                return true;
+
+        return false;
     }
 
     LFOValuesArray& lfoValues;
@@ -133,10 +194,4 @@ private:
 
     // toggles to display routes
     std::array<juce::ToggleButton, N> routeButtons;
-
-
 };
-
-
-
-
