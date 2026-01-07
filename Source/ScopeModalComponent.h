@@ -21,15 +21,21 @@ public:
             routeButtons[i].setToggleState(lfoRoutesEnabled[i],
                                            juce::dontSendNotification);
 
-            routeButtons[i].onClick = [this, i]
+            routeButtons[i].onClick = [this, i]()
             {
-                this->lfoRoutesEnabled[i] =
-                    routeButtons[i].getToggleState();
+                this->lfoRoutesEnabled[i] = routeButtons[i].getToggleState();
 
-                if (anyRouteEnabled())
-                    startTimerHz(60);
-                else
+                if (!anyRouteEnabled())
+                {
                     stopTimer();
+
+                    if (onAllRoutesDisabled)
+                        onAllRoutesDisabled();
+                }
+                else if (!isTimerRunning())
+                {
+                    startTimerHz(60);
+                }
             };
         }
         setOpaque(false);
@@ -51,14 +57,14 @@ public:
         auto area = getLocalBounds();
 
         // Inset everything so it stays inside the circle
-        constexpr int margin = 24;
+        constexpr int margin = 28;
         area.reduce(margin, margin);
 
         // Bottom area for toggles
-        auto toggleArea = area.removeFromBottom(32);
+        auto toggleArea = area.removeFromBottom(16);
 
-        const int buttonWidth = 32;
-        const int spacing = 10;
+        const int buttonWidth = 24;
+        const int spacing = 2;
 
         int totalWidth = int(routeButtons.size()) * buttonWidth
                          + (int(routeButtons.size()) - 1) * spacing;
@@ -67,7 +73,8 @@ public:
 
         for (auto& b : routeButtons)
         {
-            b.setBounds(x, toggleArea.getY(), buttonWidth, toggleArea.getHeight());
+            x += 1; // left margin offset
+            b.setBounds(x, toggleArea.getY() + 15, buttonWidth, toggleArea.getHeight());
             x += buttonWidth + spacing;
         }
     }
@@ -92,9 +99,6 @@ public:
             auto r = getLocalBounds().toFloat();
             auto centre = r.getCentre();
             const float radius = juce::jmin(r.getWidth(), r.getHeight()) * 0.5f - 2.0f;
-
-            // Background and CRT 
-            // g.fillAll(juce::Colours::white);
 
             g.setColour(juce::Colours::darkgrey);
             g.fillEllipse(r);
@@ -143,6 +147,8 @@ public:
         }
     }
 
+    std::function<void()> onAllRoutesDisabled;
+
 private:
     
     void timerCallback() override
@@ -188,10 +194,4 @@ private:
 
     // toggles to display routes
     std::array<juce::ToggleButton, N> routeButtons;
-
-
 };
-
-
-
-

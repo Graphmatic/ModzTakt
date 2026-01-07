@@ -40,7 +40,6 @@ public:
         setVisible(false);
     }
 
-
 private:
     std::function<void()> onClose;
 };

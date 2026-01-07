@@ -434,11 +434,7 @@ public:
         #endif
 
         // Timer
-        startTimerHz(100); // 100Hz refresh
-
-        // start size
-        setSize(1000, 800);
-
+        startTimerHz(100); // 100Hz refresh  
     }
 
     ~MainComponent() override
@@ -712,20 +708,49 @@ public:
     {
         if (scopeOverlay)
         {
-            removeChildComponent(scopeOverlay.get());
-            scopeOverlay.reset();
+            closeScope();
             return;
         }
+
+        lfoRoutesToScope[0] = true; // first route active by default
 
         scopeOverlay.reset(new ScopeModalComponent<maxRoutes>(
             lastLfoRoutesValues,
             lfoRoutesToScope));
 
+        scopeOverlay->onAllRoutesDisabled = [this]()
+        {
+            toggleScope();   // closes and cleans up
+        };
+
         addAndMakeVisible(scopeOverlay.get());
 
-        scopeOverlay->setSize(300, 300);
-        scopeOverlay->setCentrePosition(getWidth() / 2, getHeight() / 2);
+        constexpr int scopeSize = 136;
+        constexpr int bottomOffset = 45;
+
+        // Position relative to LFO area
+        auto lfoBounds = getLocalBounds()
+                            .withHeight(800).reduced(12)
+                            .removeFromLeft(450);  //LFO area width
+
+        scopeOverlay->setBounds(
+            lfoBounds.getCentreX() - scopeSize / 2,
+            lfoBounds.getBottom() - bottomOffset - scopeSize,
+            scopeSize,
+            scopeSize
+        );
+
         scopeOverlay->toFront(true);
+    }
+
+    void closeScope()
+    {
+        if (!scopeOverlay)
+            return;
+
+        lfoRoutesToScope.fill(false);
+        removeChildComponent(scopeOverlay.get());
+        scopeOverlay.reset();
     }
 
 
