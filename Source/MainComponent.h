@@ -103,6 +103,24 @@ public:
         shapeBox.addItem("Random", 5);
         shapeBox.setSelectedId(1);
 
+        shapeBox.onChange = [this]()
+        {
+            for (int i = 0; i < maxRoutes; ++i)
+            {
+                if (shapeBox.getSelectedId() == 5) // disable bipolar if shape = Random
+                {
+                    routeBipolarToggles[i].setToggleState(false, juce::sendNotification);
+                    routeBipolarToggles[i].setEnabled(false);
+                    routeBipolarToggles[i].setAlpha(0.5f);
+                }
+                else
+                {
+                    routeBipolarToggles[i].setEnabled(true);
+                    routeBipolarToggles[i].setAlpha(1.0f);
+                }
+            }
+        };
+
         // Rate
         rateLabel.setText("Rate:", juce::dontSendNotification);
         addAndMakeVisible(rateLabel);
