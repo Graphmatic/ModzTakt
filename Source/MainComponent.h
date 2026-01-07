@@ -326,18 +326,39 @@ public:
         // Initialize the atomic variable with current selection
         noteRestartChannel.store(noteSourceChannelBox.getSelectedId(), std::memory_order_release);
 
-        addAndMakeVisible(scopeButton);
+        // scope image button
+        scopeIcon = juce::ImageCache::getFromMemory(
+            BinaryData::scope_png,
+            BinaryData::scope_pngSize
+        );
 
-        scopeButton.setToggleable(true);
         scopeButton.setClickingTogglesState(true);
-        scopeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
-        scopeButton.setColour(juce::TextButton::textColourOffId, juce::Colours::lightgrey);
+        scopeButton.setToggleable(true);
 
+        // Assign images
+        scopeButton.setImages(
+            false,  // resizeButtonNow
+            true,   // rescaleImageToFit
+            true,   // preserveProportions
+
+            scopeIcon, 1.0f, juce::Colours::transparentBlack,  // normal
+            scopeIcon, 0.85f, juce::Colours::white.withAlpha(0.15f), // hover
+            scopeIcon, 0.7f, juce::Colours::black.withAlpha(0.25f),  // pressed
+            0.4f    // disabled opacity
+        );
+
+        scopeButton.onStateChange = [this]
+        {
+            scopeButton.setAlpha(scopeButton.getToggleState() ? 1.0f : 0.6f);
+        };
+
+        // Click action
         scopeButton.onClick = [this]
         {
             toggleScope();
         };
 
+        addAndMakeVisible(scopeButton);
 
         // Settings Button
         addAndMakeVisible(settingsButton);
@@ -645,22 +666,25 @@ public:
         placeDebugRow(noteDebugTitle, noteDebugLabel);
         #endif
 
-        constexpr int size = 24;
         constexpr int marginScope = 8;
+        constexpr int scopeButtonSize = 40;
 
         auto lfoBounds = lfoGroup.getBounds();
 
         scopeButton.setBounds(
             lfoBounds.getX() + marginScope,
-            lfoBounds.getBottom() - size - marginScope,
-            size + 24,
-            size
+            lfoBounds.getBottom() - scopeButtonSize - marginScope + 2,
+            scopeButtonSize,
+            scopeButtonSize
         );
 
+        scopeButton.setOpaque(false);
+
         // setting button
+        constexpr int size = 24;
+
         auto bounds = getLocalBounds();
 
-        
         settingsButton.setBounds(bounds.removeFromBottom(10 + size)
                                         .removeFromRight(10 + size)
                                         .removeFromLeft(size)
@@ -828,7 +852,7 @@ private:
     bool showRouteDebugLabel = false;
     #endif
 
-    juce::TextButton scopeButton { "Scope" };
+    //juce::TextButton scopeButton { "Scope" };
 
     enum class LfoShape
     {
@@ -859,6 +883,9 @@ private:
     juce::int64 lastBpmUpdateMs = 0;
 
     // Oscilloscope
+    juce::Image scopeIcon;
+    juce::ImageButton scopeButton;
+
     std::unique_ptr<ScopeModalComponent<maxRoutes>> scopeOverlay;
 
     std::array<std::atomic<float>, maxRoutes> lastLfoRoutesValues { 0.0f, 0.0f, 0.0f };
