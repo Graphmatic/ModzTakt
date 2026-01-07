@@ -1375,9 +1375,21 @@ private:
         return 2.0 * phase - 1.0;
     }
 
-    inline double lfoRandom(juce::Random& rng)
+    inline double lfoRandom(double phase, juce::Random& rng)
     {
-        return rng.nextDouble() * 2.0 - 1.0;
+        // phase in [0, 1)
+        // we’ll divide phase into 1 step per cycle
+        static double lastPhase = 0.0;
+        static double lastValue = 0.0;
+
+        // detect phase wrap
+        if (phase < lastPhase) 
+        {
+            lastValue = rng.nextDouble() * 2.0 - 1.0;
+        }
+
+        lastPhase = phase;
+        return lastValue;
     }
 
     double computeWaveform(LfoShape shape,
@@ -1429,7 +1441,7 @@ private:
             case LfoShape::Triangle: return lfoTriangle(phase);
             case LfoShape::Square:   return lfoSquare(phase);
             case LfoShape::Saw:      return lfoSaw(phase);
-            case LfoShape::Random:   return lfoRandom(rng);
+            case LfoShape::Random:   return lfoRandom(phase, rng);
             default:                 return 0.0;
         }
     }
