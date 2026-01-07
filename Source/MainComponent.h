@@ -1184,6 +1184,16 @@ private:
             }
         }
 
+        // EG trig
+        if (pendingNoteOff.exchange(false))
+        {
+            const int ch = pendingNoteChannel.load();
+            const int note = pendingNoteOff.load();
+
+            if (envelopeComponent && envelopeComponent->isEgEnabled())
+                envelopeComponent->noteOff(ch, note);
+        }
+
         // Stop LFO on Note-Off
         if (requestLfoStop.exchange(false))
         {
@@ -1196,13 +1206,6 @@ private:
                 lfoRoutes[i].hasFinishedOneShot = false;
                 lfoRoutes[i].passedPeak = false;
             }
-        }
-
-        // EG trig
-        if (pendingNoteOff.exchange(false))
-        {
-            if (envelopeComponent && envelopeComponent->isEgEnabled())
-                envelopeComponent->noteOff();
         }
 
         // LFO
@@ -1352,19 +1355,24 @@ private:
         if (envelopeComponent && envelopeComponent->isEgEnabled())
         {
             double egMIDIvalue = 0.0;
-            const int paramId = envelopeComponent->selectedEgOutParamsId();
-            const int egValue = mapEgToMidi(envelopeComponent->tick(egMIDIvalue), paramId);
-            const int egCh    = envelopeComponent->selectedEgOutChannel();
             
-            if (egCh > 0 && paramId >= 0)
+            if (envelopeComponent->tick(egMIDIvalue))
             {
-                const auto& param = syntaktParameters[paramId];
+                const int paramId = envelopeComponent->selectedEgOutParamsId();
+                const int egValue = mapEgToMidi(egMIDIvalue, paramId);
+                const int egCh    = envelopeComponent->selectedEgOutChannel();
 
-                sendThrottledParamValue(
-                    0x7FFF,        // fixed EG route index// trigg EG
-                    egCh,
-                    param,
-                    egValue);
+                if (egCh > 0 && paramId >= 0)
+                {
+                    const auto& param = syntaktParameters[paramId];
+
+                    sendThrottledParamValue(
+                        0x7FFF,
+                        egCh,
+                        param,
+                        egValue
+                    );
+                }
             }
         }
 
