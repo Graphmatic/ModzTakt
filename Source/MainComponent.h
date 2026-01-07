@@ -488,6 +488,14 @@ public:
 
         lfoRouteDebugLabel.setColour(juce::Label::textColourId, juce::Colours::yellow);
 
+        //EG check in ScopeRoute[0]
+        addAndMakeVisible(showEGinScopeToggle);
+        showEGinScopeToggle.setToggleState(showEGinScope, juce::dontSendNotification);
+        showEGinScopeToggle.onClick = [this]()
+            {
+                showEGinScope = showEGinScopeToggle.getToggleState();
+            };
+
         #endif
 
         // Timer
@@ -717,6 +725,16 @@ public:
 
         scopeButton.setOpaque(false);
 
+        #if JUCE_DEBUG
+            showEGinScopeToggle.setBounds(
+            lfoBounds.getX() + marginScope + 50,
+            lfoBounds.getBottom() - scopeButtonSize - marginScope + 2,
+            scopeButtonSize + 20,
+            scopeButtonSize
+        );
+        #endif
+
+
         // setting button
         constexpr int size = 24;
 
@@ -754,7 +772,6 @@ public:
         // Envelop generator frame
         if (envelopeComponent != nullptr)
             envelopeComponent->setBounds(egColumn);
-
     }
 
     void postJuceInit()
@@ -887,6 +904,11 @@ private:
     //bipolar check
     juce::Label lfoRouteDebugLabel;
     bool showRouteDebugLabel = false;
+
+    // EG test: to scope Route 0.
+    juce::ToggleButton showEGinScopeToggle{ "EG to Scope" };
+
+    bool showEGinScope = false;
     #endif
 
     enum class LfoShape
@@ -1358,6 +1380,21 @@ private:
             
             if (envelopeComponent->tick(egMIDIvalue))
             {
+                #if JUCE_DEBUG
+                    float egScopeValue = static_cast<float>(egMIDIvalue * 2.0 - 1.0);
+                    // 0.0 → -1.0
+                    // 1.0 → +1.0
+                    if ( showEGinScope )
+                    {
+                        // ---- SCOPE DEBUG TAP (temporary) ----
+                        lastLfoRoutesValues[0].store(
+                            static_cast<float>(egMIDIvalue * 2.0 - 1.0),
+                            std::memory_order_relaxed
+                        );
+                        // -------------------------------------
+                    }
+                #endif
+
                 const int paramId = envelopeComponent->selectedEgOutParamsId();
                 const int egValue = mapEgToMidi(egMIDIvalue, paramId);
                 const int egCh    = envelopeComponent->selectedEgOutChannel();
