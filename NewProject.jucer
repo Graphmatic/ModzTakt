@@ -6,15 +6,13 @@
   <MAINGROUP id="TYoiW9" name="ModzTakt">
     <GROUP id="{2B64A09A-E9B6-0936-1CA3-4333E5C25275}" name="Source">
       <GROUP id="{15BC47E3-A028-7859-6148-068B7D289598}" name="Resources">
-        <FILE id="bHIN4x" name="scope.png" compile="0" resource="1" file="Source/scope.png"/>
+        <FILE id="fLjTE0" name="scope.png" compile="0" resource="1" file="Source/scope.png"/>
       </GROUP>
       <FILE id="eEsiSf" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="emDMWr" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
     </GROUP>
     <FILE id="oJ54sh" name="EnvelopeComponent.h" compile="0" resource="0"
           file="Source/EnvelopeComponent.h"/>
-    <FILE id="oSgCzg" name="LfoScopeComponent.h" compile="0" resource="0"
-          file="Source/LfoScopeComponent.h"/>
     <FILE id="yREiW1" name="MidiInput.h" compile="0" resource="0" file="Source/MidiInput.h"/>
     <FILE id="VmyYxV" name="MidiMonitorContent.h" compile="0" resource="0"
           file="Source/MidiMonitorContent.h"/>

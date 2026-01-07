@@ -9,7 +9,7 @@
 namespace BinaryData
 {
     extern const char*   scope_png;
-    const int            scope_pngSize = 97034;
+    const int            scope_pngSize = 6243;
 
     extern const char*   TODO_md;
     const int            TODO_mdSize = 91;
