@@ -107,16 +107,23 @@ public:
         {
             for (int i = 0; i < maxRoutes; ++i)
             {
-                if (shapeBox.getSelectedId() == 5) // disable bipolar if shape = Random
+                if (shapeBox.getSelectedId() == 5) // disable bipolar and invert-Phase if shape = Random
                 {
                     routeBipolarToggles[i].setToggleState(false, juce::sendNotification);
                     routeBipolarToggles[i].setEnabled(false);
                     routeBipolarToggles[i].setAlpha(0.5f);
+
+                    routeInvertToggles[i].setToggleState(false, juce::sendNotification);
+                    routeInvertToggles[i].setEnabled(false);
+                    routeInvertToggles[i].setAlpha(0.5f);
                 }
                 else
                 {
                     routeBipolarToggles[i].setEnabled(true);
                     routeBipolarToggles[i].setAlpha(1.0f);
+
+                    routeInvertToggles[i].setEnabled(true);
+                    routeInvertToggles[i].setAlpha(1.0f);
                 }
             }
         };
@@ -249,10 +256,16 @@ public:
             routeOneShotToggles[i].setButtonText("1-Shot");
             addAndMakeVisible(routeOneShotToggles[i]);
 
-
             // Set up callbacks BEFORE setting any values
             routeChannelBoxes[i].onChange = [this, i]()
             {
+                //debug
+                bool stopLFO = false;
+                if (lfoActive)
+                {
+                    toggleLfo();
+                    stopLFO = true;
+                }
                 const int comboId = routeChannelBoxes[i].getSelectedId();
                 lfoRoutes[i].midiChannel = (comboId == 1) ? 0 : (comboId - 1);
                 const bool enabled = (comboId != 1);
@@ -264,6 +277,12 @@ public:
                 routeOneShotToggles[i].setVisible(enabled && noteRestartToggle.getToggleState());
 
                 updateNoteSourceChannel();
+
+                if (stopLFO)
+                {
+                    toggleLfo();
+                    stopLFO = false;
+                }
                 
                 // Defer resized() to avoid blocking during ComboBox interaction
                 juce::MessageManager::callAsync([this]() { resized(); });
@@ -870,8 +889,6 @@ private:
     bool showRouteDebugLabel = false;
     #endif
 
-    //juce::TextButton scopeButton { "Scope" };
-
     enum class LfoShape
     {
         Sine = 1,
@@ -889,8 +906,6 @@ private:
     double sampleRate = 100.0;
     juce::Random random;
     bool lfoActive = false;
-    // bool oneShotMode = false;
-    double routePhase[maxRoutes];
 
     bool oneShotActive = false;
 
@@ -903,7 +918,6 @@ private:
     // Oscilloscope
     juce::Image scopeIcon;
     juce::ImageButton scopeButton;
-
     std::unique_ptr<ScopeModalComponent<maxRoutes>> scopeOverlay;
 
     std::array<std::atomic<float>, maxRoutes> lastLfoRoutesValues { 0.0f, 0.0f, 0.0f };
@@ -1355,7 +1369,8 @@ private:
         }
 
         #if JUCE_DEBUG
-            updateLfoRouteDebugLabel();
+            if (showRouteDebugLabel)
+                updateLfoRouteDebugLabel();
         #endif
     }
 
@@ -1395,8 +1410,6 @@ private:
 
     inline double lfoRandom(double phase, juce::Random& rng)
     {
-        // phase in [0, 1)
-        // we’ll divide phase into 1 step per cycle
         static double lastPhase = 0.0;
         static double lastValue = 0.0;
 
