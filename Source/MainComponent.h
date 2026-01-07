@@ -4,7 +4,6 @@
 #include "MidiInput.h"
 #include "MidiMonitorWindow.h"
 #include "EnvelopeComponent.h"
-#include "ScopeWindow.h"
 #include "ScopeModalComponent.h"
 
 class MainComponent : public juce::Component,
@@ -864,8 +863,6 @@ private:
 
     std::array<std::atomic<float>, maxRoutes> lastLfoRoutesValues { 0.0f, 0.0f, 0.0f };
     std::array<bool, maxRoutes> lfoRoutesToScope { false, false, false };
-
-    std::unique_ptr<ScopeWindow> scopeWindow;
 
     // EG
     std::unique_ptr<EnvelopeComponent> envelopeComponent;
