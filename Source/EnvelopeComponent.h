@@ -99,6 +99,8 @@ public:
         attackLong.onClick = updateAttackMode;
         attackSnap.onClick = updateAttackMode;
 
+        setupSlider(holdSlider, holdLabel, "Hold");
+
         setupSlider(decaySlider, decayLabel, "Decay");
 
         constexpr int decayCurveGroupId = 2001;
@@ -382,11 +384,13 @@ private:
 
     // ---- ADSR ----
     juce::Label attackLabel;
+    juce::Label holdLabel;
     juce::Label decayLabel;
     juce::Label sustainLabel;
     juce::Label releaseLabel;
 
     juce::Slider attackSlider;
+    juce::Slider holdSlider;
     juce::Slider decaySlider;
     juce::Slider sustainSlider;
     juce::Slider releaseSlider;
@@ -448,14 +452,15 @@ private:
         {
             Idle,
             Attack,
+            Hold,
             Decay,
             Sustain,
             Release
         };
 
         Stage stage = Stage::Idle;
+        double currentValue = 0.0;
 
-        double currentValue = 0.0;     // 0..1
         double stageStartMs = 0.0;
         double stageStartValue = 0.0;
 
@@ -475,6 +480,7 @@ private:
                         EnvelopeState& eg,
                         double nowMs,
                         double attackMs,
+                        double holdMs,
                         double decayMs,
                         double sustainLevel,  // 0..1
                         double releaseMs)
@@ -488,6 +494,7 @@ private:
             case EnvelopeState::Stage::Idle:
                 eg.currentValue = 0.0;
                 return false;
+                        // tweakable: 3.0 = soft / 6.0 = 808 / 10.0 = aggressive / >12.0 = click risk
 
             case EnvelopeState::Stage::Attack:
             {
@@ -510,12 +517,32 @@ private:
 
                 if (eg.currentValue >= 0.999)
                 {
+                    eg.currentValue = 1.0;
+                    eg.stageStartMs = nowMs;
+                    eg.stageStartValue = 1.0;
+
+                    if (holdMs > epsilon)
+                        eg.stage = EnvelopeState::Stage::Hold;
+                    else
+                        eg.stage = EnvelopeState::Stage::Decay;
+                }
+                return true;
+            }
+
+            case EnvelopeState::Stage::Hold:
+            {
+                eg.currentValue = 1.0;
+
+                if (elapsed >= holdMs)
+                {
                     eg.stage = EnvelopeState::Stage::Decay;
                     eg.stageStartMs = nowMs;
                     eg.stageStartValue = 1.0;
                 }
+
                 return true;
             }
+
 
             case EnvelopeState::Stage::Decay:
             {
