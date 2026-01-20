@@ -89,6 +89,8 @@ public:
                 attackMode = AttackMode::Long;
             else if (attackSnap.getToggleState())
                 attackMode = AttackMode::Snap;
+
+            attackSlider.updateText(); // Refresh display
         };
 
         addAndMakeVisible(attackFast);
@@ -158,6 +160,7 @@ public:
         releaseLong.onClick = [this]()
         {
             releaseLongMode = releaseLong.getToggleState();
+            releaseSlider.updateText(); // Force slider to refresh its text display
         };
 
     }
@@ -730,30 +733,91 @@ private:
             {
                 // Range: 0.5ms to 10s with skew for more precision at lower values
                 slider.setNormalisableRange(juce::NormalisableRange<double>(0.0005, 10.0, 0.0, 0.4));
+
+                // Display in ms or seconds based on value
+                slider.textFromValueFunction = [this](double value) -> juce::String
+                {
+                    double actualMs = 0.0;
+                    
+                    switch (attackMode)
+                    {
+                        case AttackMode::Fast:
+                            actualMs = value * 1000.0;
+                            break;
+                        case AttackMode::Long:
+                            actualMs = value * 1000.0 * 3.0;
+                            break;
+                        case AttackMode::Snap:
+                            actualMs = value * 1000.0 * 0.3;
+                            break;
+                    }
+                    
+                    if (actualMs < 1000.0)
+                        return juce::String(actualMs, 1) + " ms";
+                    else
+                        return juce::String(actualMs / 1000.0, 2) + " s";
+                };
             }
                     
             if (name == "Hold")
             {
                 // Range: 0 to 5s, linear
                 slider.setNormalisableRange(juce::NormalisableRange<double>(0.0, 5.0));
+
+                slider.textFromValueFunction = [](double value) -> juce::String
+                {
+                    if (value == 0.0)
+                        return "Off";
+                    else if (value < 1.0)
+                        return juce::String(value * 1000.0, 0) + " ms";
+                    else
+                        return juce::String(value, 2) + " s";
+                };
             }
 
             if (name == "Decay")
             {
                 // Range: 1ms to 10s with skew for more precision at lower values
                 slider.setNormalisableRange(juce::NormalisableRange<double>(0.001, 10.0, 0.0, 0.45));
+
+                slider.textFromValueFunction = [](double value) -> juce::String
+                {
+                    if (value < 1.0)
+                        return juce::String(value * 1000.0, 1) + " ms";
+                    else
+                        return juce::String(value, 2) + " s";
+                };
             }
             
             if (name == "Sustain")
             {
                 // Range: 0 to 1 (level, not time)
                 slider.setRange(0.0, 1.0, 0.001);
+
+                // Display as percentage
+                slider.textFromValueFunction = [](double value) -> juce::String
+                {
+                    return juce::String(value * 100.0, 1) + " %";
+                };
             }
             
             if (name == "Release")
             {
                 // Range: 5ms to 10s (or 30s with Long mode) with skew
                 slider.setNormalisableRange(juce::NormalisableRange<double>(0.005, 10.0, 0.0, 0.45));
+
+                // Note: This shows base value. Long mode multiplier happens in conversion function
+                slider.textFromValueFunction = [this](double value) -> juce::String
+                {
+                    double actualValue = value;
+                    if (releaseLongMode)
+                        actualValue *= 3.0;
+                        
+                    if (actualValue < 1.0)
+                        return juce::String(actualValue * 1000.0, 1) + " ms";
+                    else
+                        return juce::String(actualValue, 2) + " s";
+                };
             }
 
         label.setJustificationType(juce::Justification::centredLeft);
