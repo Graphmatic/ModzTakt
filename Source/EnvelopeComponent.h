@@ -90,7 +90,7 @@ public:
             else if (attackSnap.getToggleState())
                 attackMode = AttackMode::Snap;
 
-            attackSlider.updateText(); // Refresh display
+            attackSlider.updateText();
         };
 
         addAndMakeVisible(attackFast);
@@ -160,8 +160,10 @@ public:
         releaseLong.onClick = [this]()
         {
             releaseLongMode = releaseLong.getToggleState();
-            releaseSlider.updateText(); // Force slider to refresh its text display
+            releaseSlider.updateText();
         };
+
+        setupSlider(velocityAmountSlider, velocityAmountLabel, "Vel. Amount");
 
     }
 
@@ -191,7 +193,7 @@ public:
         // ---- routing rows ----
         placeRow(noteSourceEgChannelLabel, noteSourceEgChannelBox);
 
-        content.removeFromTop(10); // visual separation
+        content.removeFromTop(10);
 
         // ---- ADSR ----
         placeRow(attackLabel, attackSlider);
@@ -287,10 +289,14 @@ public:
 
         releaseCurveBox.performLayout(releaseCurveRow);
 
+        content.removeFromTop(15);
+
+        placeRow(velocityAmountLabel, velocityAmountSlider);
+
         content.removeFromTop(20);
 
         // ---- routing rows ----
-        placeRow(midiChannelLabel, midiChannelBox);
+        placeRow(midiChannelLabel, midiChannelBox);  
         placeRow(destinationLabel, destinationBox);
 
     }
@@ -330,7 +336,8 @@ public:
                 holdSliderToMs(holdSlider.getValue()),           // convert to ms
                 decaySliderToMs(decaySlider.getValue()),
                 sustainSlider.getValue(),
-                releaseSliderToMs(releaseSlider.getValue())
+                releaseSliderToMs(releaseSlider.getValue()),
+                velocityAmountSlider.getValue()
                 )
             )
             return false;
@@ -340,12 +347,16 @@ public:
         return true;
     }
 
-    void noteOn(int ch, int note)
+    void noteOn(int ch, int note, float velocity)
     {
         if (ch == noteSourceEgChannel.load(std::memory_order_relaxed))
         {
             const double now = juce::Time::getMillisecondCounterHiRes();
-
+            
+            // Store velocity and reset peak computation flag
+            eg.velocity = juce::jlimit(0.0, 1.0, velocity / 127.0);
+            eg.attackPeakComputed = false; // Reset flag so peak will be computed on first tick
+            
             eg.stage = EnvelopeState::Stage::Attack;
             eg.stageStartMs = now;
             eg.stageStartValue = eg.currentValue;
@@ -397,11 +408,15 @@ private:
     juce::Label sustainLabel;
     juce::Label releaseLabel;
 
+    juce::Label velocityAmountLabel;
+
     juce::Slider attackSlider;
     juce::Slider holdSlider;
     juce::Slider decaySlider;
     juce::Slider sustainSlider;
     juce::Slider releaseSlider;
+
+    juce::Slider velocityAmountSlider;
 
     enum class AttackMode
     {
@@ -473,6 +488,11 @@ private:
         double stageStartValue = 0.0;
 
         bool noteHeld = false;
+
+        //Velocity to EG
+        double velocity = 1.0;       // normalized 0..1
+        double attackPeak = 1.0;     // computed per note
+        bool attackPeakComputed = false;
     };
 
     EnvelopeState eg;
@@ -483,6 +503,15 @@ private:
         int parameterIndex = -1; // index into syntaktParameters
     };
 
+    // Compute attack peak based on velocity and velocity amount
+    inline double computeAttackPeak(double velocity, double velAmount) const
+    {
+        // velAmount = 0 → peak is always 1.0 (no velocity sensitivity)
+        // velAmount = 1 → peak follows velocity exactly
+        return juce::jlimit(0.0, 1.0,
+            juce::jmap(velAmount, 0.0, 1.0, 1.0, velocity));
+    }
+
     //EG tick function
     bool advanceEnvelope(
                         EnvelopeState& eg,
@@ -491,7 +520,8 @@ private:
                         double holdMs,
                         double decayMs,
                         double sustainLevel,
-                        double releaseMs)
+                        double releaseMs,
+                        double velocityAmount)
     {
         constexpr double epsilon = 0.001; // 1 microsecond threshold
 
@@ -505,9 +535,16 @@ private:
 
             case EnvelopeState::Stage::Attack:
             {
+                // Compute attack peak once at the start of Attack stage
+                if (!eg.attackPeakComputed)
+                {
+                    eg.attackPeak = computeAttackPeak(eg.velocity, velocityAmount);
+                    eg.attackPeakComputed = true;
+                }
+                
                 if (attackMs <= epsilon)
                 {
-                    eg.currentValue = 1.0;
+                    eg.currentValue = eg.attackPeak;
                 }
                 else
                 {
@@ -519,16 +556,17 @@ private:
                         t = 1.0 - std::exp(-snapAmount * t);
                     }
 
-                    eg.currentValue = eg.stageStartValue + (1.0 - eg.stageStartValue) * t;
+                    eg.currentValue = eg.stageStartValue + (eg.attackPeak - eg.stageStartValue) * t;
                 }
 
-                if (elapsed >= attackMs || eg.currentValue >= 0.999)
+                // Check if we've reached the peak
+                if (elapsed >= attackMs || eg.currentValue >= (eg.attackPeak - 0.0001))
                 {
-                    eg.currentValue = 1.0;
+                    eg.currentValue = eg.attackPeak;
                     eg.stageStartMs = nowMs;
-                    eg.stageStartValue = 1.0;
+                    eg.stageStartValue = eg.attackPeak;
 
-                    // FIXED: Check if hold time is meaningful
+                    // Check if hold time is meaningful
                     if (holdMs > epsilon)
                         eg.stage = EnvelopeState::Stage::Hold;
                     else
@@ -539,23 +577,27 @@ private:
 
             case EnvelopeState::Stage::Hold:
             {
-                // Hold at peak value
-                eg.currentValue = 1.0;
+                // Hold at attack peak value
+                eg.currentValue = eg.attackPeak;
 
                 if (elapsed >= holdMs)
                 {
                     eg.stage = EnvelopeState::Stage::Decay;
                     eg.stageStartMs = nowMs;
-                    eg.stageStartValue = 1.0; // Start decay from peak
+                    eg.stageStartValue = eg.attackPeak; // Start decay from actual peak
                 }
                 return true;
             }
 
             case EnvelopeState::Stage::Decay:
             {
+                // Calculate actual sustain level relative to attack peak
+                // sustainLevel is 0..1 from slider, scale it to 0..attackPeak
+                const double actualSustainLevel = sustainLevel * eg.attackPeak;
+                
                 if (decayMs <= epsilon)
                 {
-                    eg.currentValue = sustainLevel;
+                    eg.currentValue = actualSustainLevel;
                     eg.stage = EnvelopeState::Stage::Sustain;
                 }
                 else
@@ -575,14 +617,14 @@ private:
 
                     const double shapedT = shapeCurve(t, decayCurveMode, kDecay);
 
-                    eg.currentValue = eg.stageStartValue + (sustainLevel - eg.stageStartValue) * shapedT;
+                    eg.currentValue = eg.stageStartValue + (actualSustainLevel - eg.stageStartValue) * shapedT;
 
                     if (elapsed >= decayMs)
                     {
-                        eg.currentValue = sustainLevel;
+                        eg.currentValue = actualSustainLevel;
                         eg.stage = EnvelopeState::Stage::Sustain;
                         eg.stageStartMs = nowMs;
-                        eg.stageStartValue = sustainLevel;
+                        eg.stageStartValue = actualSustainLevel;
                     }
                 }
 
@@ -591,7 +633,8 @@ private:
 
             case EnvelopeState::Stage::Sustain:
             {
-                eg.currentValue = sustainLevel;
+                // Sustain at level relative to attack peak
+                eg.currentValue = sustainLevel * eg.attackPeak;
 
                 if (!eg.noteHeld)
                 {
@@ -662,7 +705,6 @@ private:
             return 1.0 - std::pow(1.0 - t, p);
         }
     }
-
 
     // Convert attack slider value to milliseconds based on mode
     double attackMsFromSlider(double sliderValue) const
@@ -817,6 +859,17 @@ private:
                         return juce::String(actualValue * 1000.0, 1) + " ms";
                     else
                         return juce::String(actualValue, 2) + " s";
+                };
+            }
+
+            if (name == "Vel. Amount")
+            {
+                slider.setRange(0.0, 1.0, 0.001);
+
+                // Display as percentage
+                slider.textFromValueFunction = [](double value) -> juce::String
+                {
+                    return juce::String(value * 100.0, 1) + " %";
                 };
             }
 

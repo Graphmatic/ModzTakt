@@ -862,6 +862,7 @@ private:
     std::atomic<bool> pendingNoteOff { false };
     std::atomic<int>  pendingNoteChannel { 0 };
     std::atomic<int>  pendingNoteNumber { 0 };
+    std::atomic<float>  pendingNoteVelocity { 0 };
 
     std::atomic<int> noteRestartChannel { 0 }; // 1–16, 0 = disabled
 
@@ -1088,6 +1089,7 @@ private:
             {
                 owner.pendingNoteChannel.store(msg.getChannel(), std::memory_order_relaxed);
                 owner.pendingNoteNumber.store(msg.getNoteNumber(), std::memory_order_relaxed);
+                owner.pendingNoteVelocity.store(msg.getFloatVelocity(), std::memory_order_relaxed);
                 owner.pendingNoteOn.store(true, std::memory_order_release);
             }
             else if (msg.isNoteOff())
@@ -1184,10 +1186,11 @@ private:
         {
             const int ch   = pendingNoteChannel.load();
             const int note = pendingNoteNumber.load();
+            const float velocity = pendingNoteVelocity.load();
 
             // --- EG ---
             if (envelopeComponent && envelopeComponent->isEgEnabled())
-                envelopeComponent->noteOn(ch, note);
+                envelopeComponent->noteOn(ch, note, velocity);
 
             // --- LFO Note Restart ---
             const int restartCh = noteRestartChannel.load(std::memory_order_acquire);
