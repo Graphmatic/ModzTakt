@@ -215,9 +215,13 @@ public:
 
         attackOptions.performLayout(attackOptionsRow);
 
-        content.removeFromTop(10);
+        content.removeFromTop(15);
 
-        placeRow(decayLabel,   decaySlider);
+        placeRow(holdLabel, holdSlider);
+
+        content.removeFromTop(15);
+
+        placeRow(decayLabel, decaySlider);
 
         auto decayCurveRow = content.removeFromTop(rowHeight + 4);
 
@@ -243,11 +247,11 @@ public:
 
         decayCurveBox.performLayout(decayCurveRow);
 
-        content.removeFromTop(10);
+        content.removeFromTop(15);
 
         placeRow(sustainLabel, sustainSlider);
 
-        content.removeFromTop(10);
+        content.removeFromTop(15);
 
         placeRow(releaseLabel, releaseSlider);
 
@@ -320,7 +324,8 @@ public:
                 eg,
                 nowMs,
                 attackMsFromSlider(attackSlider.getValue()),
-                sliderToMs(decaySlider.getValue()),
+                holdSliderToMs(holdSlider.getValue()),           // convert to ms
+                decaySliderToMs(decaySlider.getValue()),
                 sustainSlider.getValue(),
                 releaseSliderToMs(releaseSlider.getValue())
                 )
@@ -482,10 +487,10 @@ private:
                         double attackMs,
                         double holdMs,
                         double decayMs,
-                        double sustainLevel,  // 0..1
+                        double sustainLevel,
                         double releaseMs)
     {
-        constexpr double epsilon = 1e-6;
+        constexpr double epsilon = 0.001; // 1 microsecond threshold
 
         auto elapsed = nowMs - eg.stageStartMs;
 
@@ -494,7 +499,6 @@ private:
             case EnvelopeState::Stage::Idle:
                 eg.currentValue = 0.0;
                 return false;
-                        // tweakable: 3.0 = soft / 6.0 = 808 / 10.0 = aggressive / >12.0 = click risk
 
             case EnvelopeState::Stage::Attack:
             {
@@ -508,19 +512,20 @@ private:
 
                     if (attackMode == AttackMode::Snap)
                     {
-                        constexpr double snapAmount = 6.0; // tweakable: 3.0 = soft / 6.0 = 808 / 10.0 = aggressive / >12.0 = click risk
+                        constexpr double snapAmount = 6.0;
                         t = 1.0 - std::exp(-snapAmount * t);
                     }
 
                     eg.currentValue = eg.stageStartValue + (1.0 - eg.stageStartValue) * t;
                 }
 
-                if (eg.currentValue >= 0.999)
+                if (elapsed >= attackMs || eg.currentValue >= 0.999)
                 {
                     eg.currentValue = 1.0;
                     eg.stageStartMs = nowMs;
                     eg.stageStartValue = 1.0;
 
+                    // FIXED: Check if hold time is meaningful
                     if (holdMs > epsilon)
                         eg.stage = EnvelopeState::Stage::Hold;
                     else
@@ -531,43 +536,51 @@ private:
 
             case EnvelopeState::Stage::Hold:
             {
+                // Hold at peak value
                 eg.currentValue = 1.0;
 
                 if (elapsed >= holdMs)
                 {
                     eg.stage = EnvelopeState::Stage::Decay;
                     eg.stageStartMs = nowMs;
-                    eg.stageStartValue = 1.0;
+                    eg.stageStartValue = 1.0; // Start decay from peak
                 }
-
                 return true;
             }
-
 
             case EnvelopeState::Stage::Decay:
             {
                 if (decayMs <= epsilon)
                 {
                     eg.currentValue = sustainLevel;
+                    eg.stage = EnvelopeState::Stage::Sustain;
                 }
                 else
                 {
                     const double t = juce::jlimit(0.0, 1.0, elapsed / decayMs);
 
-                    constexpr double kDecay = 8.0; // tweak freely
-                    const double shapedT =
-                        shapeCurve(t, decayCurveMode, kDecay);
+                    double kDecay = 0.0;
 
-                    eg.currentValue =
-                        eg.stageStartValue +
-                        (sustainLevel - eg.stageStartValue) * shapedT;
-                }
+                    if (decayCurveMode == CurveShape::Exponential)
+                    {
+                        kDecay = 0.30;
+                    }
+                    else if (decayCurveMode == CurveShape::Logarithmic)
+                    {
+                        kDecay = 0.45;
+                    }
 
-                if (elapsed >= decayMs)
-                {
-                    eg.currentValue = sustainLevel;
-                    eg.stage = EnvelopeState::Stage::Sustain;
-                    eg.stageStartValue = eg.currentValue;
+                    const double shapedT = shapeCurve(t, decayCurveMode, kDecay);
+
+                    eg.currentValue = eg.stageStartValue + (sustainLevel - eg.stageStartValue) * shapedT;
+
+                    if (elapsed >= decayMs)
+                    {
+                        eg.currentValue = sustainLevel;
+                        eg.stage = EnvelopeState::Stage::Sustain;
+                        eg.stageStartMs = nowMs;
+                        eg.stageStartValue = sustainLevel;
+                    }
                 }
 
                 return true;
@@ -591,23 +604,32 @@ private:
                 if (releaseMs <= epsilon)
                 {
                     eg.currentValue = 0.0;
+                    eg.stage = EnvelopeState::Stage::Idle;
                 }
                 else
                 {
                     const double t = juce::jlimit(0.0, 1.0, elapsed / releaseMs);
 
-                    constexpr double kRelease = 12.0; // tweak this one a lot
-                    const double shapedT =
-                        shapeCurve(t, releaseCurveMode, kRelease);
+                    double kRelease = 0.0;
 
-                    eg.currentValue =
-                        eg.stageStartValue * (1.0 - shapedT);
-                }
+                    if (releaseCurveMode == CurveShape::Exponential)
+                    {
+                        kRelease = 0.35;
+                    }
+                    else if (releaseCurveMode == CurveShape::Logarithmic)
+                    {
+                        kRelease = 0.50;
+                    }
 
-                if (eg.currentValue <= 0.0001 || elapsed >= releaseMs)
-                {
-                    eg.currentValue = 0.0;
-                    eg.stage = EnvelopeState::Stage::Idle;
+                    const double shapedT = shapeCurve(t, releaseCurveMode, kRelease);
+
+                    eg.currentValue = eg.stageStartValue * (1.0 - shapedT);
+
+                    if (elapsed >= releaseMs || eg.currentValue <= 0.0001)
+                    {
+                        eg.currentValue = 0.0;
+                        eg.stage = EnvelopeState::Stage::Idle;
+                    }
                 }
 
                 return true;
@@ -619,72 +641,77 @@ private:
 
     inline double shapeCurve(double t, CurveShape mode, double k)
     {
-        // t is assumed in [0, 1]
-        switch (mode)
+        t = juce::jlimit(0.0, 1.0, t);
+
+        if (mode == CurveShape::Linear || k <= 0.0)
+            return t;
+
+          const double p = 1.0 + 5.0 * k;
+
+        if (mode == CurveShape::Exponential)
         {
-            case CurveShape::Linear:
-                return t;
-
-            case CurveShape::Exponential:
-                // Fast start, slow tail
-                // k ≈ 3..8  (musical range)
-                return 1.0 - std::exp(-k * t);
-
-            case CurveShape::Logarithmic:
-                // Slow start, fast end
-                // k ≈ 3..8
-                return std::log1p(k * t) / std::log1p(k);
+            // Slow start, fast end
+            return std::pow(t, p);
         }
-
-        return t;
+        else // Logarithmic
+        {
+            // Fast start, slow end
+            return 1.0 - std::pow(1.0 - t, p);
+        }
     }
 
-    double attackMsFromSlider(double slider) const
+
+    // Convert attack slider value to milliseconds based on mode
+    double attackMsFromSlider(double sliderValue) const
     {
-        double norm = slider / 10.0; // 0..1
+        double seconds = sliderValue; // Slider already in seconds (0.0005 to 10.0)
 
         switch (attackMode)
         {
             case AttackMode::Fast:
-            {
-                constexpr double minMs = 0.05;
-                constexpr double maxMs = 1000.0;
-                return minMs * std::pow(maxMs / minMs, norm);
-            }
+                // Use slider value as-is: 0.5ms to 10s
+                return seconds * 1000.0;
 
             case AttackMode::Long:
-            {
-                constexpr double minMs = 5.0;
-                constexpr double maxMs = 30000.0;
-                return minMs * std::pow(maxMs / minMs, norm);
-            }
+                // Extend range: multiply by 3 for up to 30s
+                return seconds * 1000.0 * 3.0;
 
             case AttackMode::Snap:
-            {
-                // time is still fast, but curve will be steeper
-                constexpr double minMs = 0.02;
-                constexpr double maxMs = 300.0;
-                return minMs * std::pow(maxMs / minMs, norm);
-            }
+                // Shorter range for snappy attacks: 0.2ms to 3s
+                return seconds * 1000.0 * 0.3;
         }
 
-        return 10.0;
+        return sliderValue * 1000.0;
     }
 
-    double sliderToMs(double v) const
+    // Convert hold slider value to milliseconds
+    double holdSliderToMs(double sliderValue) const
     {
-        // v ∈ [0..10]
-        return 1.0 * std::pow(10.0, v / 3.33); // ≈ 5 ms → 10 s
+        // Slider is in seconds (0 to 5.0)
+        return sliderValue * 1000.0;
     }
 
-    double releaseSliderToMs(double v) const
+    // Convert decay slider value to milliseconds
+    double decaySliderToMs(double sliderValue) const
     {
-        double ms = sliderToMs(v);
+        // Slider is already in seconds (0.001 to 10.0)
+        // Just convert to milliseconds
+        return sliderValue * 1000.0;
+    }
 
+    // Convert release slider value to milliseconds
+    double releaseSliderToMs(double sliderValue) const
+    {
+        // Slider is in seconds (0.005 to 10.0)
+        double seconds = sliderValue;
+        
         if (releaseLongMode)
-            ms *= 300.0; // up to 30s
-
-        return ms;
+        {
+            // Extend to 30 seconds in Long mode
+            seconds *= 3.0;
+        }
+        
+        return seconds * 1000.0;
     }
 
     // ==== Helpers =====================================================
@@ -699,10 +726,36 @@ private:
         label.setText(name, juce::dontSendNotification);
         slider.setNumDecimalPlacesToDisplay(2);
 
-        if ( name == "Sustain")
-        {
-            slider.setRange(0.0, 1.0, 0.001);
-        }
+            if (name == "Attack")
+            {
+                // Range: 0.5ms to 10s with skew for more precision at lower values
+                slider.setNormalisableRange(juce::NormalisableRange<double>(0.0005, 10.0, 0.0, 0.4));
+            }
+                    
+            if (name == "Hold")
+            {
+                // Range: 0 to 5s, linear
+                slider.setNormalisableRange(juce::NormalisableRange<double>(0.0, 5.0));
+            }
+
+            if (name == "Decay")
+            {
+                // Range: 1ms to 10s with skew for more precision at lower values
+                slider.setNormalisableRange(juce::NormalisableRange<double>(0.001, 10.0, 0.0, 0.45));
+            }
+            
+            if (name == "Sustain")
+            {
+                // Range: 0 to 1 (level, not time)
+                slider.setRange(0.0, 1.0, 0.001);
+            }
+            
+            if (name == "Release")
+            {
+                // Range: 5ms to 10s (or 30s with Long mode) with skew
+                slider.setNormalisableRange(juce::NormalisableRange<double>(0.005, 10.0, 0.0, 0.45));
+            }
+
         label.setJustificationType(juce::Justification::centredLeft);
         label.attachToComponent(&slider, false); // semantic link only
 
@@ -715,7 +768,7 @@ private:
 
         int itemId = 1;
 
-        for (const auto& p : syntaktParameters) // static or global table
+        for (const auto& p : syntaktParameters)
         {
             if (p.egDestination)
             {
