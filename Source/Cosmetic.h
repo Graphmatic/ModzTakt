@@ -17,10 +17,10 @@ namespace SetupUI
 // ==========================================
 // Image based toggle button
 // ==========================================
-class ElektronToggleButton : public juce::DrawableButton
+class LedToggleButton : public juce::DrawableButton
 {
 public:
-    ElektronToggleButton (const juce::String& name,
+    LedToggleButton (const juce::String& name,
                           std::unique_ptr<juce::Drawable> offImage,
                           std::unique_ptr<juce::Drawable> onImage)
         : juce::DrawableButton (name, juce::DrawableButton::ImageStretched),

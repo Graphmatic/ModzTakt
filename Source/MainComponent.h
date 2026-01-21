@@ -151,7 +151,7 @@ public:
 
 
         // Note-On Restart
-        noteRestartToggle = std::make_unique<ElektronToggleButton>(
+        noteRestartToggle = std::make_unique<LedToggleButton>(
             "Restart on Note-On",
             loadSvgFromBinary (BinaryData::checkbox_off_svg,
                                BinaryData::checkbox_off_svgSize),
@@ -198,24 +198,41 @@ public:
             }
 
             // Stop-on-Note-Off UI logic
-            noteOffStopToggle.setVisible(enabled);
-            noteOffStopToggle.setEnabled(enabled);
-            addAndMakeVisible(noteOffStopToggle);
+            noteOffStopToggle->setVisible(enabled);
+            noteOffStopToggle->setEnabled(enabled);
+            addAndMakeVisible(*noteOffStopToggle);
+            addAndMakeVisible (noteOffStopToggleLabel);
+
 
             if (!enabled)
             {
-                noteOffStopToggle.setToggleState(false, juce::dontSendNotification);
-                noteOffStopToggle.setVisible(enabled);
-                noteOffStopToggle.setEnabled(enabled);
+                noteOffStopToggle->setToggleState(false, juce::dontSendNotification);
+                noteOffStopToggle->setVisible(enabled);
+                noteOffStopToggle->setEnabled(enabled);
+                noteOffStopToggleLabel.setVisible(enabled);
+
             }
 
             // layout refresh
             juce::MessageManager::callAsync([this]() { resized(); });
         };
 
-        noteOffStopToggle.setButtonText("Stop on Note-Off");
-        noteOffStopToggle.setVisible(noteRestartToggle->getToggleState());
-        noteOffStopToggle.setEnabled(false);
+       // noteOffStopToggle
+        noteOffStopToggle = std::make_unique<LedToggleButton>(
+            "Stop on Note-Off",
+            loadSvgFromBinary (BinaryData::checkbox_off_svg,
+                               BinaryData::checkbox_off_svgSize),
+            loadSvgFromBinary (BinaryData::checkbox_on_svg,
+                               BinaryData::checkbox_on_svgSize)
+        );
+        noteOffStopToggle->setVisible(noteRestartToggle->getToggleState());
+        noteOffStopToggle->setButtonText ("");
+        noteOffStopToggle->setEnabled(false);
+
+        noteOffStopToggleLabel.setText ("Stop on Note-Off", juce::dontSendNotification);
+        noteOffStopToggleLabel.setJustificationType (juce::Justification::centredLeft);
+        noteOffStopToggleLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
 
         // Debug labels
         #if JUCE_DEBUG
@@ -730,20 +747,51 @@ public:
 
         placeRowToggle (*noteRestartToggle, noteRestartToggleLabel, noteSourceChannelBox);
 
-        auto placeSingleToggleRow = [&](juce::ToggleButton& toggleButton)
+        // auto placeSingleToggleRow = [&](juce::ToggleButton& toggleButton)
+        // {
+        //     auto row = lfoAreaContent.removeFromTop(rowHeight);
+
+        //     // Align with other left-side toggles
+        //     toggleButton.setBounds(row.removeFromLeft(labelWidth));
+
+        //     lfoAreaContent.removeFromTop(6);
+        //     area.removeFromTop(10);
+        // };
+
+        auto placeSingleToggleRow = [&](juce::Button& button,
+                                  juce::Label& label)
         {
-            auto row = lfoAreaContent.removeFromTop(rowHeight);
+            // Take one row from the flowing layout
+            auto row = lfoAreaContent.removeFromTop (rowHeight);
 
-            // Align with other left-side toggles
-            toggleButton.setBounds(row.removeFromLeft(labelWidth));
+            // --- Button (fixed size, vertically centered)
+            auto buttonArea = row.removeFromLeft (labelWidth);
 
-            lfoAreaContent.removeFromTop(6);
-            area.removeFromTop(10);
+            const int buttonY = buttonArea.getY()
+                              + (buttonArea.getHeight() - SetupUI::toggleSize) / 2;
+
+            button.setBounds (buttonArea.getX(),
+                              buttonY,
+                              SetupUI::toggleSize,
+                              SetupUI::toggleSize);
+
+            // --- Label (takes remaining space before combobox)
+            auto labelArea = buttonArea.withX (button.getRight() + (spacing - 6));
+            labelArea.setWidth (labelWidth - SetupUI::toggleSize - spacing);
+
+            label.setBounds (labelArea);
+
+            // // --- Right aligned control
+            // row.removeFromLeft (spacing);
+            // rightAlignComponent.setBounds (row);
+
+            // Vertical spacing after row
+            lfoAreaContent.removeFromTop (6);
         };
 
         // Stop-on-Note-Off toggle directly underneath
-        if (noteOffStopToggle.isVisible())
-            placeSingleToggleRow(noteOffStopToggle);
+        if (noteOffStopToggle->isVisible())
+            placeSingleToggleRow(*noteOffStopToggle, noteOffStopToggleLabel);
 
         #if JUCE_DEBUG
         auto placeDebugRow = [&](juce::Label& title, juce::Label& midiValues)
@@ -890,11 +938,10 @@ private:
     juce::Slider rateSlider, depthSlider;
 
     //Note-On retrig on/off and source channel
-    // juce::ToggleButton noteRestartToggle { "Restart on Note-On" };
-    std::unique_ptr<ElektronToggleButton> noteRestartToggle;
-    juce::Label noteRestartToggleLabel;
+    std::unique_ptr<LedToggleButton> noteRestartToggle, noteOffStopToggle;
+    juce::Label noteRestartToggleLabel, noteOffStopToggleLabel;
 
-    juce::ToggleButton noteOffStopToggle { "Stop on Note-Off" };
+    //juce::ToggleButton noteOffStopToggle { "Stop on Note-Off" };
 
     juce::ComboBox noteSourceChannelBox; // source channel for Note-On listening
 
@@ -1148,7 +1195,7 @@ private:
 
                 // Request LFO stop only if UI allows it
                 if (owner.noteRestartToggle->getToggleState()
-                    && owner.noteOffStopToggle.getToggleState())
+                    && owner.noteOffStopToggle->getToggleState())
                 {
                     owner.requestLfoStop.store(true, std::memory_order_release);
                 }
