@@ -5,6 +5,7 @@
 #include "MidiMonitorWindow.h"
 #include "EnvelopeComponent.h"
 #include "ScopeModalComponent.h"
+#include "Cosmetic.h"
 
 class MainComponent : public juce::Component,
                       private juce::Timer,
@@ -149,9 +150,24 @@ public:
         startButton.onClick = [this] { toggleLfo(); };
 
 
-        // Note-On Restart Controls
-        addAndMakeVisible(noteRestartToggle);
-        noteRestartToggle.setToggleState(false, juce::dontSendNotification);
+        // Note-On Restart
+        noteRestartToggle = std::make_unique<ElektronToggleButton>(
+            "Restart on Note-On",
+            loadSvgFromBinary (BinaryData::checkbox_off_svg,
+                               BinaryData::checkbox_off_svgSize),
+            loadSvgFromBinary (BinaryData::checkbox_on_svg,
+                               BinaryData::checkbox_on_svgSize)
+        );
+
+        addAndMakeVisible (*noteRestartToggle);
+        noteRestartToggle->setToggleState (false, juce::dontSendNotification);
+        noteRestartToggle->setButtonText ("");
+
+        noteRestartToggleLabel.setText ("Restart on Note-On", juce::dontSendNotification);
+        noteRestartToggleLabel.setJustificationType (juce::Justification::centredLeft);
+        noteRestartToggleLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        addAndMakeVisible (noteRestartToggleLabel);
 
         addAndMakeVisible(noteSourceChannelBox);
         noteSourceChannelBox.setTextWhenNothingSelected("Source Channel");
@@ -161,9 +177,9 @@ public:
             noteRestartChannel.store(noteSourceChannelBox.getSelectedId(), std::memory_order_release);
         };
 
-        noteRestartToggle.onClick = [this]()
+        noteRestartToggle->onClick = [this]()
         {
-            const bool enabled = noteRestartToggle.getToggleState();
+            const bool enabled = noteRestartToggle->getToggleState();
 
             for (int i = 0; i < maxRoutes; ++i)
             {
@@ -198,7 +214,7 @@ public:
         };
 
         noteOffStopToggle.setButtonText("Stop on Note-Off");
-        noteOffStopToggle.setVisible(noteRestartToggle.getToggleState());
+        noteOffStopToggle.setVisible(noteRestartToggle->getToggleState());
         noteOffStopToggle.setEnabled(false);
 
         // Debug labels
@@ -274,7 +290,7 @@ public:
                 routeInvertToggles[i].setVisible(enabled);
                 if (!enabled)
                     routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
-                routeOneShotToggles[i].setVisible(enabled && noteRestartToggle.getToggleState());
+                routeOneShotToggles[i].setVisible(enabled && noteRestartToggle->getToggleState());
 
                 updateNoteSourceChannel();
 
@@ -354,7 +370,7 @@ public:
             routeParameterBoxes[i].setVisible(enabled);
             routeBipolarToggles[i].setVisible(enabled);
             routeInvertToggles[i].setVisible(enabled);
-            routeOneShotToggles[i].setVisible(noteRestartToggle.getToggleState());
+            routeOneShotToggles[i].setVisible(noteRestartToggle->getToggleState());
         }
 
         // Initialize note source channel list
@@ -507,6 +523,11 @@ public:
         stopTimer();
         midiClock.stop();
         midiOut.reset();
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        g.fillAll (SetupUI::background);
     }
 
     void resized() override
@@ -674,15 +695,40 @@ public:
         startButton.setBounds(lfoAreaContent.removeFromTop(40));
 
         lfoAreaContent.removeFromTop(10);
-        auto placeRowToggle = [&](juce::ToggleButton& toggleButton, juce::ComboBox& combobox)
+
+        auto placeRowToggle = [&](juce::Button& button,
+                                  juce::Label& label,
+                                  juce::Component& rightAlignComponent)
         {
-            auto row = lfoAreaContent.removeFromTop(rowHeight);
-            toggleButton.setBounds(row.removeFromLeft(labelWidth));
-            row.removeFromLeft(spacing);
-            combobox.setBounds(row);
-            lfoAreaContent.removeFromTop(6);area.removeFromTop(10);
+            // Take one row from the flowing layout
+            auto row = lfoAreaContent.removeFromTop (rowHeight);
+
+            // --- Button (fixed size, vertically centered)
+            auto buttonArea = row.removeFromLeft (labelWidth);
+
+            const int buttonY = buttonArea.getY()
+                              + (buttonArea.getHeight() - SetupUI::toggleSize) / 2;
+
+            button.setBounds (buttonArea.getX(),
+                              buttonY,
+                              SetupUI::toggleSize,
+                              SetupUI::toggleSize);
+
+            // --- Label (takes remaining space before combobox)
+            auto labelArea = buttonArea.withX (button.getRight() + (spacing - 6));
+            labelArea.setWidth (labelWidth - SetupUI::toggleSize - spacing);
+
+            label.setBounds (labelArea);
+
+            // --- Right aligned control
+            row.removeFromLeft (spacing);
+            rightAlignComponent.setBounds (row);
+
+            // Vertical spacing after row
+            lfoAreaContent.removeFromTop (6);
         };
-        placeRowToggle(noteRestartToggle, noteSourceChannelBox);
+
+        placeRowToggle (*noteRestartToggle, noteRestartToggleLabel, noteSourceChannelBox);
 
         auto placeSingleToggleRow = [&](juce::ToggleButton& toggleButton)
         {
@@ -844,7 +890,10 @@ private:
     juce::Slider rateSlider, depthSlider;
 
     //Note-On retrig on/off and source channel
-    juce::ToggleButton noteRestartToggle { "Restart on Note-On" };
+    // juce::ToggleButton noteRestartToggle { "Restart on Note-On" };
+    std::unique_ptr<ElektronToggleButton> noteRestartToggle;
+    juce::Label noteRestartToggleLabel;
+
     juce::ToggleButton noteOffStopToggle { "Stop on Note-Off" };
 
     juce::ComboBox noteSourceChannelBox; // source channel for Note-On listening
@@ -1098,7 +1147,7 @@ private:
                 owner.pendingNoteOff.store(true, std::memory_order_release);
 
                 // Request LFO stop only if UI allows it
-                if (owner.noteRestartToggle.getToggleState()
+                if (owner.noteRestartToggle->getToggleState()
                     && owner.noteOffStopToggle.getToggleState())
                 {
                     owner.requestLfoStop.store(true, std::memory_order_release);
@@ -1195,7 +1244,7 @@ private:
             // --- LFO Note Restart ---
             const int restartCh = noteRestartChannel.load(std::memory_order_acquire);
 
-            if (noteRestartToggle.getToggleState()
+            if (noteRestartToggle->getToggleState()
                 && restartCh > 0
                 && ch == restartCh)
             {
