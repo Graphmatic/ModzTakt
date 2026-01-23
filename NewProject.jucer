@@ -9,6 +9,14 @@
         <FILE id="E6cyC1" name="checkbox_off.svg" compile="0" resource="1"
               file="Source/checkbox_off.svg"/>
         <FILE id="vL9HBZ" name="checkbox_on.svg" compile="0" resource="1" file="Source/checkbox_on.svg"/>
+        <FILE id="wgZWXH" name="checkbox_on_green.svg" compile="0" resource="1"
+              file="Source/checkbox_on_green.svg"/>
+        <FILE id="fsun5n" name="checkbox_on_orange.svg" compile="0" resource="1"
+              file="Source/checkbox_on_orange.svg"/>
+        <FILE id="T1tJiq" name="checkbox_on_purple.svg" compile="0" resource="1"
+              file="Source/checkbox_on_purple.svg"/>
+        <FILE id="XseoiQ" name="checkbox_on_red.svg" compile="0" resource="1"
+              file="Source/checkbox_on_red.svg"/>
         <FILE id="fLjTE0" name="scope.png" compile="0" resource="1" file="Source/scope.png"/>
       </GROUP>
       <FILE id="eEsiSf" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>

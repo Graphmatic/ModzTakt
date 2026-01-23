@@ -110,21 +110,21 @@ public:
             {
                 if (shapeBox.getSelectedId() == 5) // disable bipolar and invert-Phase if shape = Random
                 {
-                    routeBipolarToggles[i].setToggleState(false, juce::sendNotification);
-                    routeBipolarToggles[i].setEnabled(false);
-                    routeBipolarToggles[i].setAlpha(0.5f);
+                    routeBipolarToggles[i]->setToggleState(false, juce::sendNotification);
+                    routeBipolarToggles[i]->setEnabled(false);
+                    routeBipolarToggles[i]->setAlpha(0.5f);
 
-                    routeInvertToggles[i].setToggleState(false, juce::sendNotification);
-                    routeInvertToggles[i].setEnabled(false);
-                    routeInvertToggles[i].setAlpha(0.5f);
+                    routeInvertToggles[i]->setToggleState(false, juce::sendNotification);
+                    routeInvertToggles[i]->setEnabled(false);
+                    routeInvertToggles[i]->setAlpha(0.5f);
                 }
                 else
                 {
-                    routeBipolarToggles[i].setEnabled(true);
-                    routeBipolarToggles[i].setAlpha(1.0f);
+                    routeBipolarToggles[i]->setEnabled(true);
+                    routeBipolarToggles[i]->setAlpha(1.0f);
 
-                    routeInvertToggles[i].setEnabled(true);
-                    routeInvertToggles[i].setAlpha(1.0f);
+                    routeInvertToggles[i]->setEnabled(true);
+                    routeInvertToggles[i]->setAlpha(1.0f);
                 }
             }
         };
@@ -151,12 +151,10 @@ public:
 
 
         // Note-On Restart
-        noteRestartToggle = std::make_unique<LedToggleButton>(
+        noteRestartToggle = std::make_unique<LedToggleButton>
+        (
             "Restart on Note-On",
-            loadSvgFromBinary (BinaryData::checkbox_off_svg,
-                               BinaryData::checkbox_off_svgSize),
-            loadSvgFromBinary (BinaryData::checkbox_on_svg,
-                               BinaryData::checkbox_on_svgSize)
+            SetupUI::LedColour::Orange
         );
 
         addAndMakeVisible (*noteRestartToggle);
@@ -185,12 +183,12 @@ public:
             {
                 // Hide One-Shot UI if restart is OFF
                 if (routeChannelBoxes[i].getSelectedId() != 1)
-                    routeOneShotToggles[i].setVisible(enabled);
+                    routeOneShotToggles[i]->setVisible(enabled);
 
                 if (!enabled)
                 {
                     // Hard-disable one-shot state
-                    routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
+                    routeOneShotToggles[i]->setToggleState(false, juce::dontSendNotification);
 
                     lfoRoutes[i].oneShot = false;
                     lfoRoutes[i].hasFinishedOneShot = false;
@@ -217,14 +215,13 @@ public:
             juce::MessageManager::callAsync([this]() { resized(); });
         };
 
-       // noteOffStopToggle
-        noteOffStopToggle = std::make_unique<LedToggleButton>(
+        // noteOffStopToggle
+        noteOffStopToggle = std::make_unique<LedToggleButton>
+        (
             "Stop on Note-Off",
-            loadSvgFromBinary (BinaryData::checkbox_off_svg,
-                               BinaryData::checkbox_off_svgSize),
-            loadSvgFromBinary (BinaryData::checkbox_on_svg,
-                               BinaryData::checkbox_on_svgSize)
+            SetupUI::LedColour::Orange
         );
+
         noteOffStopToggle->setVisible(noteRestartToggle->getToggleState());
         noteOffStopToggle->setButtonText ("");
         noteOffStopToggle->setEnabled(false);
@@ -278,16 +275,31 @@ public:
             addAndMakeVisible(routeParameterBoxes[i]);
 
             // Bipolar toggle
-            routeBipolarToggles[i].setButtonText("+/-");
-            addAndMakeVisible(routeBipolarToggles[i]);
+            routeBipolarToggles[i] = std::make_unique<LedToggleButton>
+            (
+                "+/-",
+                SetupUI::LedColour::Green
+            );
+            routeBipolarToggles[i]->setButtonText("+/-");
+            addAndMakeVisible(*routeBipolarToggles[i]);
 
             // Invert Phase toggle
-            routeInvertToggles[i].setButtonText("Inv");
-            addAndMakeVisible(routeInvertToggles[i]);
+            routeInvertToggles[i] = std::make_unique<LedToggleButton>
+            (
+                "Inv",
+                SetupUI::LedColour::Green
+            );
+            routeInvertToggles[i]->setButtonText("Inv");
+            addAndMakeVisible(*routeInvertToggles[i]);
 
             // One Shot toggle
-            routeOneShotToggles[i].setButtonText("1-Shot");
-            addAndMakeVisible(routeOneShotToggles[i]);
+            routeOneShotToggles[i] = std::make_unique<LedToggleButton>
+            (
+                "Inv",
+                SetupUI::LedColour::Orange
+            );
+            routeOneShotToggles[i]->setButtonText("1-Shot");
+            addAndMakeVisible(*routeOneShotToggles[i]);
 
             // Set up callbacks BEFORE setting any values
             routeChannelBoxes[i].onChange = [this, i]()
@@ -303,11 +315,11 @@ public:
                 lfoRoutes[i].midiChannel = (comboId == 1) ? 0 : (comboId - 1);
                 const bool enabled = (comboId != 1);
                 routeParameterBoxes[i].setVisible(enabled);
-                routeBipolarToggles[i].setVisible(enabled);
-                routeInvertToggles[i].setVisible(enabled);
+                routeBipolarToggles[i]->setVisible(enabled);
+                routeInvertToggles[i]->setVisible(enabled);
                 if (!enabled)
-                    routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
-                routeOneShotToggles[i].setVisible(enabled && noteRestartToggle->getToggleState());
+                    routeOneShotToggles[i]->setToggleState(false, juce::dontSendNotification);
+                routeOneShotToggles[i]->setVisible(enabled && noteRestartToggle->getToggleState());
 
                 updateNoteSourceChannel();
 
@@ -330,35 +342,35 @@ public:
                     syntaktParameters[lfoRoutes[i].parameterIndex].isBipolar;
 
                 // Initialize UI + route state ONCE
-                routeBipolarToggles[i].setToggleState(paramIsBipolar,
+                routeBipolarToggles[i]->setToggleState(paramIsBipolar,
                                                      juce::dontSendNotification);
                 lfoRoutes[i].bipolar = paramIsBipolar;
             };
 
 
-            routeBipolarToggles[i].onClick = [this, i]()
+            routeBipolarToggles[i]->onClick = [this, i]()
             {
-                lfoRoutes[i].bipolar = routeBipolarToggles[i].getToggleState();
+                lfoRoutes[i].bipolar = routeBipolarToggles[i]->getToggleState();
                 #if JUCE_DEBUG
                 updateLfoRouteDebugLabel();
                 #endif
             };
 
-            routeInvertToggles[i].onClick = [this, i]()
+            routeInvertToggles[i]->onClick = [this, i]()
             {
-                lfoRoutes[i].invertPhase = routeInvertToggles[i].getToggleState();
+                lfoRoutes[i].invertPhase = routeInvertToggles[i]->getToggleState();
             };
 
-            routeOneShotToggles[i].onClick = [this, i]()
+            routeOneShotToggles[i]->onClick = [this, i]()
             {
-                lfoRoutes[i].oneShot = routeOneShotToggles[i].getToggleState();
+                lfoRoutes[i].oneShot = routeOneShotToggles[i]->getToggleState();
 
                 if (!lfoRoutes[i].oneShot)
                     lfoRoutes[i].hasFinishedOneShot = false;
             };
 
-            routeInvertToggles[i].setToggleState(false, juce::dontSendNotification);
-            routeOneShotToggles[i].setToggleState(false, juce::dontSendNotification);
+            routeInvertToggles[i]->setToggleState(false, juce::dontSendNotification);
+            routeOneShotToggles[i]->setToggleState(false, juce::dontSendNotification);
 
             // set initial values
             if (i == 0)
@@ -367,7 +379,7 @@ public:
                 routeChannelBoxes[i].setSelectedId(1, juce::dontSendNotification); // Disabled
                 
             routeParameterBoxes[i].setSelectedId(1, juce::dontSendNotification);
-            routeBipolarToggles[i].setToggleState(false, juce::dontSendNotification);
+            routeBipolarToggles[i]->setToggleState(false, juce::dontSendNotification);
 
             // Initialize route state
             lfoRoutes[i].midiChannel = (routeChannelBoxes[i].getSelectedId() == 1)
@@ -376,7 +388,7 @@ public:
 
             lfoRoutes[i].parameterIndex = routeParameterBoxes[i].getSelectedId() - 1;
 
-            lfoRoutes[i].bipolar = routeBipolarToggles[i].getToggleState();
+            lfoRoutes[i].bipolar = routeBipolarToggles[i]->getToggleState();
 
             lfoRoutes[i].invertPhase = false;
             lfoRoutes[i].oneShot     = false;
@@ -385,9 +397,9 @@ public:
             // Set initial visibility
             const bool enabled = (routeChannelBoxes[i].getSelectedId() != 1);
             routeParameterBoxes[i].setVisible(enabled);
-            routeBipolarToggles[i].setVisible(enabled);
-            routeInvertToggles[i].setVisible(enabled);
-            routeOneShotToggles[i].setVisible(noteRestartToggle->getToggleState());
+            routeBipolarToggles[i]->setVisible(enabled);
+            routeInvertToggles[i]->setVisible(enabled);
+            routeOneShotToggles[i]->setVisible(noteRestartToggle->getToggleState());
         }
 
         // Initialize note source channel list
@@ -677,23 +689,23 @@ public:
             }
 
             fb.items.add(
-                juce::FlexItem(routeBipolarToggles[i])
+                juce::FlexItem(*routeBipolarToggles[i])
                     .withWidth(checkboxColumnWidth)
-                    .withHeight(rowHeight)
+                    .withHeight(rowHeight - 4)
                     .withMargin({ 0, columnGap, 0, 0 })
             );
 
             fb.items.add(
-                juce::FlexItem(routeInvertToggles[i])
+                juce::FlexItem(*routeInvertToggles[i])
                     .withWidth(checkboxColumnWidth)
-                    .withHeight(rowHeight)
+                    .withHeight(rowHeight - 4)
                     .withMargin({ 0, columnGap, 0, 0 })
             );
 
             fb.items.add(
-                juce::FlexItem(routeOneShotToggles[i])
+                juce::FlexItem(*routeOneShotToggles[i])
                     .withWidth(checkboxColumnWidth)
-                    .withHeight(rowHeight)
+                    .withHeight(rowHeight - 4)
                     .withMargin({ 0, columnGap, 0, 0 })
             );
 
@@ -747,17 +759,6 @@ public:
 
         placeRowToggle (*noteRestartToggle, noteRestartToggleLabel, noteSourceChannelBox);
 
-        // auto placeSingleToggleRow = [&](juce::ToggleButton& toggleButton)
-        // {
-        //     auto row = lfoAreaContent.removeFromTop(rowHeight);
-
-        //     // Align with other left-side toggles
-        //     toggleButton.setBounds(row.removeFromLeft(labelWidth));
-
-        //     lfoAreaContent.removeFromTop(6);
-        //     area.removeFromTop(10);
-        // };
-
         auto placeSingleToggleRow = [&](juce::Button& button,
                                   juce::Label& label)
         {
@@ -780,10 +781,6 @@ public:
             labelArea.setWidth (labelWidth - SetupUI::toggleSize - spacing);
 
             label.setBounds (labelArea);
-
-            // // --- Right aligned control
-            // row.removeFromLeft (spacing);
-            // rightAlignComponent.setBounds (row);
 
             // Vertical spacing after row
             lfoAreaContent.removeFromTop (6);
@@ -941,9 +938,7 @@ private:
     std::unique_ptr<LedToggleButton> noteRestartToggle, noteOffStopToggle;
     juce::Label noteRestartToggleLabel, noteOffStopToggleLabel;
 
-    //juce::ToggleButton noteOffStopToggle { "Stop on Note-Off" };
-
-    juce::ComboBox noteSourceChannelBox; // source channel for Note-On listening
+    juce::ComboBox noteSourceChannelBox; // source channel for Note-On listening (lfo)
 
     juce::TextButton startButton;
 
@@ -988,9 +983,8 @@ private:
     std::array<juce::Label, maxRoutes> routeLabels;
     std::array<juce::ComboBox, maxRoutes> routeChannelBoxes;
     std::array<juce::ComboBox, maxRoutes> routeParameterBoxes;
-    juce::ToggleButton routeBipolarToggles[maxRoutes];
-    juce::ToggleButton routeInvertToggles[maxRoutes];   // NEW
-    juce::ToggleButton routeOneShotToggles[maxRoutes];  // NEW
+
+    std::unique_ptr<LedToggleButton> routeBipolarToggles[maxRoutes], routeInvertToggles[maxRoutes], routeOneShotToggles[maxRoutes];
 
     std::array<double, maxRoutes> lfoPhase { 0.0, 0.0, 0.0 };
 
