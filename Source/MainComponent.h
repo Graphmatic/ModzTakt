@@ -112,11 +112,11 @@ public:
                 {
                     routeBipolarToggles[i]->setToggleState(false, juce::sendNotification);
                     routeBipolarToggles[i]->setEnabled(false);
-                    routeBipolarToggles[i]->setAlpha(0.5f);
+                    routeBipolarToggles[i]->setAlpha(0.8f);
 
                     routeInvertToggles[i]->setToggleState(false, juce::sendNotification);
                     routeInvertToggles[i]->setEnabled(false);
-                    routeInvertToggles[i]->setAlpha(0.5f);
+                    routeInvertToggles[i]->setAlpha(0.8f);
                 }
                 else
                 {
@@ -136,6 +136,8 @@ public:
         rateSlider.setRange(0.1, 20.0, 0.01);
         rateSlider.setValue(2.0);
         rateSlider.setTextValueSuffix(" Hz");
+        rateSlider.setLookAndFeel(&lookGreen);
+
 
         // Depth
         depthLabel.setText("Depth:", juce::dontSendNotification);
@@ -143,12 +145,13 @@ public:
         addAndMakeVisible(depthSlider);
         depthSlider.setRange(0.0, 1.0, 0.01);
         depthSlider.setValue(1.0);
+        depthSlider.setLookAndFeel(&lookPurple);
+
 
           // Start Button
         addAndMakeVisible(startButton);
         startButton.setButtonText("Start LFO");
         startButton.onClick = [this] { toggleLfo(); };
-
 
         // Note-On Restart
         noteRestartToggle = std::make_unique<LedToggleButton>
@@ -242,12 +245,15 @@ public:
 
         // LFO routes checkbox labels
         bipolarLabel.setText("+/-", juce::dontSendNotification);
+        bipolarLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
         addAndMakeVisible(bipolarLabel);
 
         invertPhaseLabel.setText("inv.", juce::dontSendNotification);
+        invertPhaseLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
         addAndMakeVisible(invertPhaseLabel);
 
         oneShotLabel.setText("1-s", juce::dontSendNotification);
+        oneShotLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
         addAndMakeVisible(oneShotLabel);
 
         // Multi-CC Routing (3 routes)
@@ -552,6 +558,8 @@ public:
         stopTimer();
         midiClock.stop();
         midiOut.reset();
+        rateSlider.setLookAndFeel (nullptr);
+        depthSlider.setLookAndFeel (nullptr);
     }
 
     void paint (juce::Graphics& g) override
@@ -932,6 +940,10 @@ private:
 
     juce::ComboBox midiOutputBox, midiInputBox, syncModeBox, divisionBox;
     juce::ComboBox shapeBox;
+
+    // SLiders
+    ModzTaktLookAndFeel lookGreen  { SetupUI::sliderTrackGreen };
+    ModzTaktLookAndFeel lookPurple { SetupUI::sliderTrackPurple };
     juce::Slider rateSlider, depthSlider;
 
     //Note-On retrig on/off and source channel

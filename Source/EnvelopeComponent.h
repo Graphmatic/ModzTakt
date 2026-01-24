@@ -73,7 +73,7 @@ public:
             egOutParamsId = (destinationBox.getSelectedId() - 1);
         };
 
-        setupSlider(attackSlider, attackLabel, "Attack");
+        setupSlider(attackSlider, attackLabel, "Attack", juce::Slider::LinearHorizontal);
 
         constexpr int attackModeGroupId = 1001;
 
@@ -85,7 +85,7 @@ public:
 
         attackLong = std::make_unique<LedToggleButton>
         (
-            "Fast",
+            "Long",
             SetupUI::LedColour::Orange
         );
 
@@ -118,11 +118,20 @@ public:
         auto updateAttackMode = [this]()
         {
             if (attackFast->getToggleState())
+            {
                 attackMode = AttackMode::Fast;
+                attackSlider.setLookAndFeel(&lookGreen);
+            }
             else if (attackLong->getToggleState())
+            {
                 attackMode = AttackMode::Long;
+                attackSlider.setLookAndFeel(&lookOrange);
+            }
             else if (attackSnap->getToggleState())
+            {
                 attackMode = AttackMode::Snap;
+                attackSlider.setLookAndFeel(&lookGreen);
+            }
 
             attackSlider.updateText();
         };
@@ -141,9 +150,9 @@ public:
         attackLong->onClick = updateAttackMode;
         attackSnap->onClick = updateAttackMode;
 
-        setupSlider(holdSlider, holdLabel, "Hold");
+        setupSlider(holdSlider, holdLabel, "Hold", juce::Slider::LinearHorizontal);
 
-        setupSlider(decaySlider, decayLabel, "Decay");
+        setupSlider(decaySlider, decayLabel, "Decay", juce::Slider::LinearHorizontal);
 
         constexpr int decayCurveGroupId = 2001;
 
@@ -205,9 +214,9 @@ public:
         addAndMakeVisible(*decayLog);
         addAndMakeVisible(decayLogLabel);
 
-        setupSlider(sustainSlider, sustainLabel, "Sustain");
+        setupSlider(sustainSlider, sustainLabel, "Sustain", juce::Slider::LinearHorizontal);
 
-        setupSlider(releaseSlider, releaseLabel, "Release");
+        setupSlider(releaseSlider, releaseLabel, "Release", juce::Slider::LinearHorizontal);
 
         constexpr int releaseCurveGroupId = 2002;
 
@@ -251,9 +260,42 @@ public:
 
         auto updateReleaseCurve = [this]()
         {
-            if (releaseLinear->getToggleState())      releaseCurveMode = CurveShape::Linear;
-            else if (releaseExpo->getToggleState())   releaseCurveMode = CurveShape::Exponential;
-            else if (releaseLog->getToggleState())    releaseCurveMode = CurveShape::Logarithmic;
+            if (releaseLinear->getToggleState())
+            {
+                releaseCurveMode = CurveShape::Linear;
+                if (releaseLong->getToggleState())
+                {
+                    releaseSlider.setLookAndFeel(&lookDarkGreen);
+                }
+                else
+                {
+                    releaseSlider.setLookAndFeel(&lookGreen);
+                }
+            }     
+            else if (releaseExpo->getToggleState())
+            {
+                releaseCurveMode = CurveShape::Exponential;
+                if (releaseLong->getToggleState())
+                {
+                    releaseSlider.setLookAndFeel(&lookDarkGreen);
+                }
+                else
+                {
+                    releaseSlider.setLookAndFeel(&lookGreen);
+                }
+            }
+            else if (releaseLog->getToggleState()) 
+            {
+                releaseCurveMode = CurveShape::Logarithmic;
+                if (releaseLong->getToggleState())
+                {
+                    releaseSlider.setLookAndFeel(&lookDarkGreen);
+                }
+                else
+                {
+                    releaseSlider.setLookAndFeel(&lookGreen);
+                }
+            }
         };
 
         releaseLinear->onClick = updateReleaseCurve;
@@ -286,11 +328,29 @@ public:
         releaseLong->onClick = [this]()
         {
             releaseLongMode = releaseLong->getToggleState();
+            if (releaseLongMode)
+            {
+                releaseSlider.setLookAndFeel(&lookDarkGreen);
+            }
+            else
+            {
+                releaseSlider.setLookAndFeel(&lookGreen);
+            }
             releaseSlider.updateText();
         };
 
-        setupSlider(velocityAmountSlider, velocityAmountLabel, "Vel. Amount");
+        setupSlider(velocityAmountSlider, velocityAmountLabel, "Vel. Amount", juce::Slider::LinearHorizontal);
 
+    }
+
+    ~EnvelopeComponent() override
+    {
+        attackSlider.setLookAndFeel (nullptr);
+        holdSlider.setLookAndFeel (nullptr);
+        decaySlider.setLookAndFeel (nullptr);
+        sustainSlider.setLookAndFeel (nullptr);
+        releaseSlider.setLookAndFeel (nullptr);
+        velocityAmountSlider.setLookAndFeel (nullptr);
     }
 
     void resized() override
@@ -450,7 +510,7 @@ public:
 
         releaseCurveBox.performLayout(releaseCurveRow);
 
-        content.removeFromTop(15);
+        content.removeFromTop(20);
 
         placeRow(velocityAmountLabel, velocityAmountSlider);
 
@@ -571,13 +631,12 @@ private:
 
     juce::Label velocityAmountLabel;
 
-    juce::Slider attackSlider;
-    juce::Slider holdSlider;
-    juce::Slider decaySlider;
-    juce::Slider sustainSlider;
-    juce::Slider releaseSlider;
+    ModzTaktLookAndFeel lookGreen  { SetupUI::sliderTrackGreen };
+    ModzTaktLookAndFeel lookDarkGreen  { SetupUI::sliderTrackDarkGreen };
+    ModzTaktLookAndFeel lookOrange { SetupUI::sliderTrackOrange };
+    ModzTaktLookAndFeel lookPurple { SetupUI::sliderTrackPurple };
 
-    juce::Slider velocityAmountSlider;
+    juce::Slider attackSlider, holdSlider, decaySlider, sustainSlider, releaseSlider, velocityAmountSlider;
 
     enum class AttackMode
     {
@@ -917,15 +976,23 @@ private:
     }
 
     // ==== Helpers =====================================================
-    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& name)
+    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, const juce::Slider::SliderStyle& style)
     {
         addAndMakeVisible(slider);
         addAndMakeVisible(label);
 
-        slider.setSliderStyle(juce::Slider::LinearHorizontal);
-        slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+        slider.setSliderStyle(style);
 
+        if (style == juce::Slider::LinearHorizontal)
+            slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+
+        // if (style == juce::Slider::LinearVertical)
+        //     slider.setTextBoxStyle(juce::Slider::TextBoxBottom, false, 60, 20);
+
+        slider.setLookAndFeel(&lookGreen);
+        
         label.setText(name, juce::dontSendNotification);
+
         slider.setNumDecimalPlacesToDisplay(2);
 
             if (name == "Attack")
@@ -1028,6 +1095,7 @@ private:
                 {
                     return juce::String(value * 100.0, 1) + " %";
                 };
+                slider.setLookAndFeel(&lookPurple);
             }
 
         label.setJustificationType(juce::Justification::centredLeft);
