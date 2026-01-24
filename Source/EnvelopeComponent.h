@@ -1,6 +1,8 @@
 #pragma once
+
 #include <JuceHeader.h>
 #include "SyntaktParameterTable.h"
+#include "Cosmetic.h"
 
 class EnvelopeComponent : public juce::Component
 {
@@ -75,31 +77,69 @@ public:
 
         constexpr int attackModeGroupId = 1001;
 
-        attackFast.setRadioGroupId(attackModeGroupId);
-        attackLong.setRadioGroupId(attackModeGroupId);
-        attackSnap.setRadioGroupId(attackModeGroupId);
+        attackFast = std::make_unique<LedToggleButton>
+        (
+            "Fast",
+            SetupUI::LedColour::Green
+        );
 
-        attackFast.setToggleState(true, juce::dontSendNotification);
+        attackLong = std::make_unique<LedToggleButton>
+        (
+            "Fast",
+            SetupUI::LedColour::Orange
+        );
+
+        attackSnap = std::make_unique<LedToggleButton>
+        (
+            "Snap",
+            SetupUI::LedColour::Green
+        );
+
+        attackFast->setRadioGroupId(attackModeGroupId);
+
+        attackFastLabel.setText ("Fast", juce::dontSendNotification);
+        attackFastLabel.setJustificationType (juce::Justification::centredLeft);
+        attackFastLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        attackLong->setRadioGroupId(attackModeGroupId);
+
+        attackLongLabel.setText ("Long", juce::dontSendNotification);
+        attackLongLabel.setJustificationType (juce::Justification::centredLeft);
+        attackLongLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        attackSnap->setRadioGroupId(attackModeGroupId);
+
+        attackSnapLabel.setText ("Snap", juce::dontSendNotification);
+        attackSnapLabel.setJustificationType (juce::Justification::centredLeft);
+        attackSnapLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        attackFast->setToggleState(true, juce::dontSendNotification);
 
         auto updateAttackMode = [this]()
         {
-            if (attackFast.getToggleState())
+            if (attackFast->getToggleState())
                 attackMode = AttackMode::Fast;
-            else if (attackLong.getToggleState())
+            else if (attackLong->getToggleState())
                 attackMode = AttackMode::Long;
-            else if (attackSnap.getToggleState())
+            else if (attackSnap->getToggleState())
                 attackMode = AttackMode::Snap;
 
             attackSlider.updateText();
         };
 
-        addAndMakeVisible(attackFast);
-        addAndMakeVisible(attackSnap);
-        addAndMakeVisible(attackLong);
+        addAndMakeVisible(*attackFast);
+        addAndMakeVisible(attackFastLabel);
 
-        attackFast.onClick = updateAttackMode;
-        attackLong.onClick = updateAttackMode;
-        attackSnap.onClick = updateAttackMode;
+        addAndMakeVisible(*attackSnap);
+        addAndMakeVisible(attackSnapLabel);
+
+        addAndMakeVisible(*attackLong);
+        addAndMakeVisible(attackLongLabel);
+
+
+        attackFast->onClick = updateAttackMode;
+        attackLong->onClick = updateAttackMode;
+        attackSnap->onClick = updateAttackMode;
 
         setupSlider(holdSlider, holdLabel, "Hold");
 
@@ -107,26 +147,63 @@ public:
 
         constexpr int decayCurveGroupId = 2001;
 
-        decayLinear.setRadioGroupId(decayCurveGroupId);
-        decayExpo.setRadioGroupId(decayCurveGroupId);
-        decayLog.setRadioGroupId(decayCurveGroupId);
+        decayLinear = std::make_unique<LedToggleButton>
+        (
+            "Lin",
+            SetupUI::LedColour::Green
+        );
 
-        decayExpo.setToggleState(true, juce::dontSendNotification);
+        decayExpo = std::make_unique<LedToggleButton>
+        (
+            "Exp",
+            SetupUI::LedColour::Green
+        );
+
+        decayLog = std::make_unique<LedToggleButton>
+        (
+            "Log",
+            SetupUI::LedColour::Green
+        );
+
+        decayLinear->setRadioGroupId(decayCurveGroupId);
+
+        decayLinearLabel.setText ("Lin", juce::dontSendNotification);
+        decayLinearLabel.setJustificationType (juce::Justification::centredLeft);
+        decayLinearLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        decayExpo->setRadioGroupId(decayCurveGroupId);
+
+        decayExpoLabel.setText ("Exp", juce::dontSendNotification);
+        decayExpoLabel.setJustificationType (juce::Justification::centredLeft);
+        decayExpoLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        decayLog->setRadioGroupId(decayCurveGroupId);
+
+        decayLogLabel.setText ("Log", juce::dontSendNotification);
+        decayLogLabel.setJustificationType (juce::Justification::centredLeft);
+        decayLogLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        decayExpo->setToggleState(true, juce::dontSendNotification);
 
         auto updateDecayCurve = [this]()
         {
-            if (decayLinear.getToggleState())      decayCurveMode = CurveShape::Linear;
-            else if (decayExpo.getToggleState())   decayCurveMode = CurveShape::Exponential;
-            else if (decayLog.getToggleState())    decayCurveMode = CurveShape::Logarithmic;
+            if (decayLinear->getToggleState())      decayCurveMode = CurveShape::Linear;
+            else if (decayExpo->getToggleState())   decayCurveMode = CurveShape::Exponential;
+            else if (decayLog->getToggleState())    decayCurveMode = CurveShape::Logarithmic;
         };
 
-        decayLinear.onClick = updateDecayCurve;
-        decayExpo.onClick   = updateDecayCurve;
-        decayLog.onClick    = updateDecayCurve;
+        decayLinear->onClick = updateDecayCurve;
+        decayExpo->onClick   = updateDecayCurve;
+        decayLog->onClick    = updateDecayCurve;
 
-        addAndMakeVisible(decayLinear);
-        addAndMakeVisible(decayExpo);
-        addAndMakeVisible(decayLog);
+        addAndMakeVisible(*decayLinear);
+        addAndMakeVisible(decayLinearLabel);
+
+        addAndMakeVisible(*decayExpo);
+        addAndMakeVisible(decayExpoLabel);
+
+        addAndMakeVisible(*decayLog);
+        addAndMakeVisible(decayLogLabel);
 
         setupSlider(sustainSlider, sustainLabel, "Sustain");
 
@@ -134,32 +211,81 @@ public:
 
         constexpr int releaseCurveGroupId = 2002;
 
-        releaseLinear.setRadioGroupId(releaseCurveGroupId);
-        releaseExpo.setRadioGroupId(releaseCurveGroupId);
-        releaseLog.setRadioGroupId(releaseCurveGroupId);
+        releaseLinear = std::make_unique<LedToggleButton>
+        (
+            "Lin",
+            SetupUI::LedColour::Green
+        );
 
-        releaseExpo.setToggleState(true, juce::dontSendNotification);
+        releaseExpo = std::make_unique<LedToggleButton>
+        (
+            "Exp",
+            SetupUI::LedColour::Green
+        );
+
+        releaseLog = std::make_unique<LedToggleButton>
+        (
+            "Log",
+            SetupUI::LedColour::Green
+        );
+
+        releaseLinear->setRadioGroupId(releaseCurveGroupId);
+
+        releaseLinearLabel.setText ("Lin", juce::dontSendNotification);
+        releaseLinearLabel.setJustificationType (juce::Justification::centredLeft);
+        releaseLinearLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        releaseExpo->setRadioGroupId(releaseCurveGroupId);
+
+        releaseExpoLabel.setText ("Exp", juce::dontSendNotification);
+        releaseExpoLabel.setJustificationType (juce::Justification::centredLeft);
+        releaseExpoLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        releaseLog->setRadioGroupId(releaseCurveGroupId);
+
+        releaseLogLabel.setText ("Log", juce::dontSendNotification);
+        releaseLogLabel.setJustificationType (juce::Justification::centredLeft);
+        releaseLogLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        releaseExpo->setToggleState(true, juce::dontSendNotification);
 
         auto updateReleaseCurve = [this]()
         {
-            if (releaseLinear.getToggleState())      releaseCurveMode = CurveShape::Linear;
-            else if (releaseExpo.getToggleState())   releaseCurveMode = CurveShape::Exponential;
-            else if (releaseLog.getToggleState())    releaseCurveMode = CurveShape::Logarithmic;
+            if (releaseLinear->getToggleState())      releaseCurveMode = CurveShape::Linear;
+            else if (releaseExpo->getToggleState())   releaseCurveMode = CurveShape::Exponential;
+            else if (releaseLog->getToggleState())    releaseCurveMode = CurveShape::Logarithmic;
         };
 
-        releaseLinear.onClick = updateReleaseCurve;
-        releaseExpo.onClick   = updateReleaseCurve;
-        releaseLog.onClick    = updateReleaseCurve;
+        releaseLinear->onClick = updateReleaseCurve;
+        releaseExpo->onClick   = updateReleaseCurve;
+        releaseLog->onClick    = updateReleaseCurve;
 
-        addAndMakeVisible(releaseLinear);
-        addAndMakeVisible(releaseExpo);
-        addAndMakeVisible(releaseLog);
+        addAndMakeVisible(*releaseLinear);
+        addAndMakeVisible(releaseLinearLabel);
 
-        addAndMakeVisible(releaseLong);
+        addAndMakeVisible(*releaseExpo);
+        addAndMakeVisible(releaseExpoLabel);
 
-        releaseLong.onClick = [this]()
+        addAndMakeVisible(*releaseLog);
+        addAndMakeVisible(releaseLogLabel);
+
+        releaseLong = std::make_unique<LedToggleButton>
+        (
+            "Long",
+            SetupUI::LedColour::Orange
+        );
+
+        releaseLongLabel.setText ("Log", juce::dontSendNotification);
+        releaseLongLabel.setJustificationType (juce::Justification::centredLeft);
+        releaseLongLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
+
+        addAndMakeVisible(*releaseLong);
+        addAndMakeVisible(releaseLongLabel);
+
+
+        releaseLong->onClick = [this]()
         {
-            releaseLongMode = releaseLong.getToggleState();
+            releaseLongMode = releaseLong->getToggleState();
             releaseSlider.updateText();
         };
 
@@ -205,16 +331,28 @@ public:
         attackOptions.alignItems    = juce::FlexBox::AlignItems::flexStart;
         attackOptions.justifyContent= juce::FlexBox::JustifyContent::flexStart;
 
-        attackOptions.items.add(juce::FlexItem(attackSnap)
-                                                .withWidth(60)
+        attackOptions.items.add(juce::FlexItem(*attackSnap)
+                                                .withWidth(22)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 4, 0, 0 }));
+        attackOptions.items.add(juce::FlexItem(attackSnapLabel)
+                                                .withWidth(50)
                                                 .withHeight(rowHeight)
                                                 .withMargin({ 0, 8, 0, 0 }));
-        attackOptions.items.add(juce::FlexItem(attackFast)
-                                                .withWidth(60)
+        attackOptions.items.add(juce::FlexItem(*attackFast)
+                                                .withWidth(22)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 4, 0, 0 }));
+        attackOptions.items.add(juce::FlexItem(attackFastLabel)
+                                                .withWidth(50)
                                                 .withHeight(rowHeight)
                                                 .withMargin({ 0, 8, 0, 0 }));
-        attackOptions.items.add(juce::FlexItem(attackLong)
-                                                .withWidth(60)
+        attackOptions.items.add(juce::FlexItem(*attackLong)
+                                                .withWidth(22)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 4, 0, 0 }));
+        attackOptions.items.add(juce::FlexItem(attackLongLabel)
+                                                .withWidth(50)
                                                 .withHeight(rowHeight)
                                                 .withMargin({ 0, 8, 0, 0 }));
 
@@ -235,18 +373,28 @@ public:
         decayCurveBox.alignItems     = juce::FlexBox::AlignItems::flexStart;
         decayCurveBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
-        decayCurveBox.items.add(juce::FlexItem(decayLinear)
-                                                .withWidth(60)
+        decayCurveBox.items.add(juce::FlexItem(*decayLinear)
+                                                .withWidth(22)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 4, 0, 0 }));
+        decayCurveBox.items.add(juce::FlexItem(decayLinearLabel)
+                                                .withWidth(50)
                                                 .withHeight(rowHeight)
                                                 .withMargin({ 0, 8, 0, 0 }));
-
-        decayCurveBox.items.add(juce::FlexItem(decayExpo)
-                                                .withWidth(60)
+        decayCurveBox.items.add(juce::FlexItem(*decayExpo)
+                                                .withWidth(22)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 4, 0, 0 }));
+        decayCurveBox.items.add(juce::FlexItem(decayExpoLabel)
+                                                .withWidth(50)
                                                 .withHeight(rowHeight)
                                                 .withMargin({ 0, 8, 0, 0 }));
-
-        decayCurveBox.items.add(juce::FlexItem(decayLog)
-                                                .withWidth(60)
+        decayCurveBox.items.add(juce::FlexItem(*decayLog)
+                                                .withWidth(22)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 4, 0, 0 }));
+        decayCurveBox.items.add(juce::FlexItem(decayLogLabel)
+                                                .withWidth(50)
                                                 .withHeight(rowHeight)
                                                 .withMargin({ 0, 8, 0, 0 }));
 
@@ -267,25 +415,38 @@ public:
         releaseCurveBox.alignItems     = juce::FlexBox::AlignItems::flexStart;
         releaseCurveBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
-        releaseCurveBox.items.add(juce::FlexItem(releaseLinear)
-                                                    .withWidth(60)
+        releaseCurveBox.items.add(juce::FlexItem(*releaseLinear)
+                                                    .withWidth(22)
                                                     .withHeight(rowHeight)
                                                     .withMargin({ 0, 8, 0, 0 }));
-
-        releaseCurveBox.items.add(juce::FlexItem(releaseExpo)
-                                                    .withWidth(60)
+        releaseCurveBox.items.add(juce::FlexItem(releaseLinearLabel)
+                                                .withWidth(50)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 8, 0, 0 }));
+        releaseCurveBox.items.add(juce::FlexItem(*releaseExpo)
+                                                    .withWidth(22)
                                                     .withHeight(rowHeight)
                                                     .withMargin({ 0, 8, 0, 0 }));
-
-        releaseCurveBox.items.add(juce::FlexItem(releaseLog)
-                                                    .withWidth(60)
+        releaseCurveBox.items.add(juce::FlexItem(releaseExpoLabel)
+                                                .withWidth(50)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 8, 0, 0 }));
+        releaseCurveBox.items.add(juce::FlexItem(*releaseLog)
+                                                    .withWidth(22)
                                                     .withHeight(rowHeight)
                                                     .withMargin({ 0, 8, 0, 0 }));
-
-        releaseCurveBox.items.add(juce::FlexItem(releaseLong)
-                                                    .withWidth(70)
+        releaseCurveBox.items.add(juce::FlexItem(releaseLogLabel)
+                                                .withWidth(50)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 8, 0, 0 }));
+        releaseCurveBox.items.add(juce::FlexItem(*releaseLong)
+                                                    .withWidth(22)
                                                     .withHeight(rowHeight)
                                                     .withMargin({ 0, 8, 0, 0 }));
+        releaseCurveBox.items.add(juce::FlexItem(releaseLongLabel)
+                                                .withWidth(50)
+                                                .withHeight(rowHeight)
+                                                .withMargin({ 0, 8, 0, 0 }));
 
         releaseCurveBox.performLayout(releaseCurveRow);
 
@@ -427,11 +588,11 @@ private:
 
     AttackMode attackMode = AttackMode::Fast;
 
-    juce::ToggleButton attackFast  { "Fast" };
-    juce::ToggleButton attackLong  { "Long" };
-    juce::ToggleButton attackSnap  { "Snap" };
+    std::unique_ptr<LedToggleButton> attackFast, attackLong, attackSnap;
+    
+    juce::Label attackFastLabel, attackLongLabel, attackSnapLabel;
 
-    //DEBUG
+     //DEBUG
     #if JUCE_DEBUG
     // Debug: show last Note-On received
     juce::Label noteDebugTitle { {}, "Last Note-On:" };
@@ -453,19 +614,15 @@ private:
         Logarithmic
     };
 
-    CurveShape decayCurveMode   = CurveShape::Exponential; // sensible default
+    CurveShape decayCurveMode   = CurveShape::Exponential; // default
     CurveShape releaseCurveMode = CurveShape::Exponential;
 
-    // ===== UI buttons =====
-    juce::ToggleButton decayLinear   { "Lin" };
-    juce::ToggleButton decayExpo     { "Exp" };
-    juce::ToggleButton decayLog      { "Log" };
+    std::unique_ptr<LedToggleButton> decayLinear, decayExpo, decayLog;
+    juce::Label decayLinearLabel, decayExpoLabel, decayLogLabel;
 
-    juce::ToggleButton releaseLinear { "Lin" };
-    juce::ToggleButton releaseExpo   { "Exp" };
-    juce::ToggleButton releaseLog    { "Log" };
+    std::unique_ptr<LedToggleButton> releaseLinear, releaseExpo, releaseLog, releaseLong;
+    juce::Label releaseLinearLabel, releaseExpoLabel, releaseLogLabel, releaseLongLabel;
 
-    juce::ToggleButton releaseLong { "Long" };
     bool releaseLongMode = false;
 
     //EG state 
