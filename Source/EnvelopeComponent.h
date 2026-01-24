@@ -275,7 +275,7 @@ public:
             SetupUI::LedColour::Orange
         );
 
-        releaseLongLabel.setText ("Log", juce::dontSendNotification);
+        releaseLongLabel.setText ("Long", juce::dontSendNotification);
         releaseLongLabel.setJustificationType (juce::Justification::centredLeft);
         releaseLongLabel.setColour (juce::Label::textColourId, SetupUI::labelsColor);
 
