@@ -375,18 +375,6 @@ static const unsigned char temp_binary_data_6[] =
 
 const char* scope_png = (const char*) temp_binary_data_6;
 
-//================== TODO.md ==================
-static const unsigned char temp_binary_data_7[] =
-"// TODO\n"
-"\n"
-"EG\n"
-"\n"
-"- NRPN\n"
-"\n"
-"- checking if selecting a machine on the Syntakt send any Midi message";
-
-const char* TODO_md = (const char*) temp_binary_data_7;
-
 
 const char* getNamedResource (const char* resourceNameUTF8, int& numBytes);
 const char* getNamedResource (const char* resourceNameUTF8, int& numBytes)
@@ -406,7 +394,6 @@ const char* getNamedResource (const char* resourceNameUTF8, int& numBytes)
         case 0x9a728a45:  numBytes = 1595; return checkbox_on_purple_svg;
         case 0x2d82ad52:  numBytes = 1589; return checkbox_on_red_svg;
         case 0x7b80d5be:  numBytes = 6243; return scope_png;
-        case 0xe63de430:  numBytes = 91; return TODO_md;
         default: break;
     }
 
@@ -422,8 +409,7 @@ const char* namedResourceList[] =
     "checkbox_on_orange_svg",
     "checkbox_on_purple_svg",
     "checkbox_on_red_svg",
-    "scope_png",
-    "TODO_md"
+    "scope_png"
 };
 
 const char* originalFilenames[] =
@@ -434,8 +420,7 @@ const char* originalFilenames[] =
     "checkbox_on_orange.svg",
     "checkbox_on_purple.svg",
     "checkbox_on_red.svg",
-    "scope.png",
-    "TODO.md"
+    "scope.png"
 };
 
 const char* getNamedResourceOriginalFilename (const char* resourceNameUTF8);

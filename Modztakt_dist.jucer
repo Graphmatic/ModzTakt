@@ -2,7 +2,8 @@
 
 <JUCERPROJECT id="uOuBID" name="ModzTakt" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyEmail="makethembusy@proton.me"
-              bundleIdentifier="com.zaoum.modztakt" defines="JUCE_ALSA=1&#10;JUCE_ALSA_MIDI=1&#10;JUCE_JACK=0">
+              bundleIdentifier="com.zaoum.modztakt" defines="JUCE_ALSA=1&#10;JUCE_ALSA_MIDI=1&#10;JUCE_JACK=0"
+              companyName="Sound &amp; Breakfast">
   <MAINGROUP id="TYoiW9" name="ModzTakt">
     <GROUP id="{2B64A09A-E9B6-0936-1CA3-4333E5C25275}" name="Source">
       <GROUP id="{15BC47E3-A028-7859-6148-068B7D289598}" name="Resources">
@@ -22,6 +23,7 @@
       <FILE id="eEsiSf" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="emDMWr" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
     </GROUP>
+    <FILE id="Cvl6aP" name="Cosmetic.h" compile="0" resource="0" file="Source/Cosmetic.h"/>
     <FILE id="oJ54sh" name="EnvelopeComponent.h" compile="0" resource="0"
           file="Source/EnvelopeComponent.h"/>
     <FILE id="yREiW1" name="MidiInput.h" compile="0" resource="0" file="Source/MidiInput.h"/>
@@ -33,7 +35,6 @@
           file="Source/ScopeModalComponent.h"/>
     <FILE id="hHSPl4" name="SyntaktParameterTable.h" compile="0" resource="0"
           file="Source/SyntaktParameterTable.h"/>
-    <FILE id="b7Dlol" name="TODO.md" compile="0" resource="1" file="Source/TODO.md"/>
   </MAINGROUP>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="1" useGlobalPath="1"/>
